@@ -4,7 +4,6 @@ from __future__ import annotations
 
 from collections.abc import Collection
 from datetime import date
-from pathlib import Path
 
 from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
@@ -14,7 +13,6 @@ from mtg_meta_scraper.db.engine import make_engine, migrate
 from mtg_meta_scraper.db.tables import Archetype, Deck, DeckCard, Event, ScanState
 from mtg_meta_scraper.models import DeckDetail, MetaShare, ParsedEvent
 
-METRICS_SQL = Path(__file__).parent / "metrics.sql"
 
 
 class Repo:
@@ -37,12 +35,8 @@ class Repo:
         self.session.rollback()
 
     def init_schema(self) -> None:
-        """Alembic migrations, then the metrics.sql functions (recreated on every start)."""
+        """Brings the schema (tables, view and SQL functions) to the latest Alembic migration."""
         migrate(self.url)
-        with self.session.begin():
-            # Parameterless DBAPI cursor: '%' in the file must not be treated as placeholders.
-            with self.session.connection().connection.cursor() as cur:
-                cur.execute(METRICS_SQL.read_text())
 
     def upsert_event(self, ev: ParsedEvent) -> None:
         if ev.format_code is None:

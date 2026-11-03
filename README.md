@@ -53,7 +53,7 @@ For each format, `validate` compares the top 10 archetypes of the site's "Metaga
 | `MTG_META_SCRAPER_UPDATE_HOUR_UTC` | `6` | Hour of the daily update |
 | `GF_ADMIN_PASSWORD` | `admin` | Grafana admin password |
 
-The **performance weights** live in a single place, the `placement_points` function in `mtg_meta_scraper/db/metrics.sql`. The functions are recreated every time the scraper starts.
+The **performance weights** live in a single place, the `placement_points` function in `mtg_meta_scraper/db/sql_objects.py`. Changing them requires a migration (see [Database and migrations](#database-and-migrations)).
 
 ## Development
 
@@ -67,21 +67,21 @@ Parser tests use real MTGTop8 pages saved in `tests/fixtures/`. Database tests u
 
 ### Database and migrations
 
-Tables are SQLAlchemy models in `mtg_meta_scraper/db/tables.py`; the schema is managed with Alembic. The scraper applies any pending migrations by itself on every start (so does `python -m mtg_meta_scraper init-db`).
+Tables are SQLAlchemy models in `mtg_meta_scraper/db/tables.py`; the view and SQL functions used by Grafana are [alembic_utils](https://github.com/olirice/alembic_utils) objects in `mtg_meta_scraper/db/sql_objects.py`. The whole schema is managed with Alembic. The scraper applies any pending migrations by itself on every start (so does `python -m mtg_meta_scraper init-db`).
 
 To change the schema:
 
 ```bash
-# 1. edit mtg_meta_scraper/db/tables.py
+# 1. edit mtg_meta_scraper/db/tables.py (tables) or sql_objects.py (view, functions, weights)
 # 2. generate the migration (compares the models with the DB in DATABASE_URL, default localhost)
 uv run alembic revision --autogenerate -m "add column X"
 # 3. review the new file in mtg_meta_scraper/db/migrations/versions/ and apply it
 uv run alembic upgrade head
 ```
 
-The `test_models_match_migrations` test fails if the models and the migrations don't match.
+The `test_models_match_migrations` test fails if tables, view or functions don't match the migrations.
 
-The SQL functions used by Grafana (`metrics.sql`) stay outside the migrations: they are recreated on every start. The `deck_facts` view does depend on the columns of `deck`, `event` and `archetype`, though: a migration that renames them or changes their type must first run `DROP VIEW IF EXISTS deck_facts CASCADE` (it will be recreated on restart).
+The `deck_facts` view depends on the columns of `deck`, `event` and `archetype`: a migration that renames them or changes their type must drop the view first (`op.drop_entity(...)`) and recreate it afterwards (`op.create_entity(...)`), using the definition from `sql_objects.py`.
 
 A database created before Alembic was introduced (with the old `schema.sql`) has different index names: if it is empty, recreate it (`docker compose down -v`, **deletes the data**); otherwise align it by hand and then mark it with `uv run alembic stamp head`.
 
@@ -89,7 +89,7 @@ Layout:
 
 - `mtg_meta_scraper/http.py`: slow HTTP client with retries.
 - `mtg_meta_scraper/parsing/`: parsing of the event, format and home pages.
-- `mtg_meta_scraper/db/`: ORM models (`tables.py`), Alembic migrations (`migrations/`), SQL metrics and repository.
+- `mtg_meta_scraper/db/`: ORM models (`tables.py`), SQL view and functions (`sql_objects.py`), Alembic migrations (`migrations/`) and repository.
 - `mtg_meta_scraper/pipeline.py`: backfill and update.
 - `mtg_meta_scraper/validate.py`: comparison with the site.
 - `grafana/`: automatically provisioned datasource and dashboard.

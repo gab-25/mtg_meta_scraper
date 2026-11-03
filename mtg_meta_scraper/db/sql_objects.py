@@ -1,7 +1,20 @@
--- Metagame metrics. Run by Repo.init_schema() after the Alembic migrations (idempotent).
+"""SQL view and functions used by Grafana, versioned with Alembic through alembic_utils.
 
--- Performance weights: change them HERE to change them everywhere.
-CREATE OR REPLACE FUNCTION placement_points(rank_min int) RETURNS numeric
+Changing a definition here requires a migration:
+    uv run alembic revision --autogenerate -m "describe the change"
+The migration contains the full new definition; `test_models_match_migrations` fails if you forget it.
+"""
+
+from alembic_utils.pg_function import PGFunction
+from alembic_utils.pg_view import PGView
+from alembic_utils.replaceable_entity import register_entities
+
+# Performance weights: change them HERE, then generate a migration (see README).
+PLACEMENT_POINTS = PGFunction(
+    schema="public",
+    signature="placement_points(rank_min int)",
+    definition="""
+RETURNS numeric
 LANGUAGE sql IMMUTABLE AS $$
     SELECT (CASE
         WHEN rank_min = 1 THEN 8
@@ -11,11 +24,16 @@ LANGUAGE sql IMMUTABLE AS $$
         WHEN rank_min <= 16 THEN 1
         ELSE 0.5
     END)::numeric
-$$;
+$$
+""",
+)
 
--- One deck per row, with the grouping used by the metrics:
--- MTGTop8 category, or commander for Duel Commander / cEDH.
-CREATE OR REPLACE VIEW deck_facts AS
+# One deck per row, with the grouping used by the metrics:
+# MTGTop8 category, or commander for Duel Commander / cEDH.
+DECK_FACTS = PGView(
+    schema="public",
+    signature="deck_facts",
+    definition="""
 SELECT d.id AS deck_id,
        d.event_id,
        e.format_code,
@@ -31,12 +49,16 @@ FROM deck d
 JOIN event e ON e.id = d.event_id
 LEFT JOIN archetype a ON a.id = d.archetype_id
 WHERE (CASE WHEN e.format_code IN ('EDH', 'cEDH') AND d.commander IS NOT NULL
-            THEN d.commander ELSE a.name END) IS NOT NULL;
+            THEN d.commander ELSE a.name END) IS NOT NULL
+""",
+)
 
--- Meta share (%) per time bucket; Leagues included. Only the top_n groups by deck count.
-CREATE OR REPLACE FUNCTION meta_share_series(
-    fmt text, bucket interval, t_from timestamptz, t_to timestamptz, top_n int
-) RETURNS TABLE ("time" timestamptz, group_name text, share numeric)
+# Meta share (%) per time bucket; Leagues included. Only the top_n groups by deck count.
+META_SHARE_SERIES = PGFunction(
+    schema="public",
+    signature="meta_share_series(fmt text, bucket interval, t_from timestamptz, t_to timestamptz, top_n int)",
+    definition="""
+RETURNS TABLE ("time" timestamptz, group_name text, share numeric)
 LANGUAGE sql STABLE AS $$
     WITH f AS (
         SELECT time_bucket(bucket, df.event_date)::timestamptz AS b, df.group_name AS g
@@ -50,12 +72,16 @@ LANGUAGE sql STABLE AS $$
     WHERE f.g IN (SELECT g FROM top)
     GROUP BY f.b, f.g, tot.n
     ORDER BY 1, 2
-$$;
+$$
+""",
+)
 
--- Average performance (points per placement) per bucket; Leagues excluded. Same top_n as the share.
-CREATE OR REPLACE FUNCTION performance_series(
-    fmt text, bucket interval, t_from timestamptz, t_to timestamptz, top_n int
-) RETURNS TABLE ("time" timestamptz, group_name text, avg_points numeric)
+# Average performance (points per placement) per bucket; Leagues excluded. Same top_n as the share.
+PERFORMANCE_SERIES = PGFunction(
+    schema="public",
+    signature="performance_series(fmt text, bucket interval, t_from timestamptz, t_to timestamptz, top_n int)",
+    definition="""
+RETURNS TABLE ("time" timestamptz, group_name text, avg_points numeric)
 LANGUAGE sql STABLE AS $$
     WITH f AS (
         SELECT time_bucket(bucket, df.event_date)::timestamptz AS b, df.group_name AS g,
@@ -69,12 +95,16 @@ LANGUAGE sql STABLE AS $$
     WHERE NOT is_league AND g IN (SELECT g FROM top)
     GROUP BY b, g
     ORDER BY 1, 2
-$$;
+$$
+""",
+)
 
--- Rising decks: current period (as_of - period, as_of] vs the previous one of equal length.
-CREATE OR REPLACE FUNCTION rising(
-    fmt text, period interval, min_decks int, as_of timestamptz
-) RETURNS TABLE (group_name text, decks int, share numeric, share_delta numeric,
+# Rising decks: current period (as_of - period, as_of] vs the previous one of equal length.
+RISING = PGFunction(
+    schema="public",
+    signature="rising(fmt text, period interval, min_decks int, as_of timestamptz)",
+    definition="""
+RETURNS TABLE (group_name text, decks int, share numeric, share_delta numeric,
                  avg_points numeric, points_delta numeric, win_pct numeric)
 LANGUAGE sql STABLE AS $$
     WITH f AS (
@@ -105,12 +135,16 @@ LANGUAGE sql STABLE AS $$
     LEFT JOIN agg pv ON pv.g = c.g AND pv.p = 'prev'
     WHERE c.p = 'cur' AND c.decks >= min_decks
     ORDER BY 4 DESC, 1
-$$;
+$$
+""",
+)
 
--- Detail: deck names that make up a group.
-CREATE OR REPLACE FUNCTION group_breakdown(
-    fmt text, grp text, t_from timestamptz, t_to timestamptz
-) RETURNS TABLE (deck_name text, decks int)
+# Detail: deck names that make up a group.
+GROUP_BREAKDOWN = PGFunction(
+    schema="public",
+    signature="group_breakdown(fmt text, grp text, t_from timestamptz, t_to timestamptz)",
+    definition="""
+RETURNS TABLE (deck_name text, decks int)
 LANGUAGE sql STABLE AS $$
     SELECT df.deck_name, count(*)::int
     FROM deck_facts df
@@ -118,4 +152,12 @@ LANGUAGE sql STABLE AS $$
       AND df.event_date BETWEEN t_from::date AND t_to::date
     GROUP BY df.deck_name
     ORDER BY 2 DESC, 1
-$$;
+$$
+""",
+)
+
+# Order matters: each object only depends on the ones before it.
+ENTITIES = [PLACEMENT_POINTS, DECK_FACTS, META_SHARE_SERIES, PERFORMANCE_SERIES, RISING, GROUP_BREAKDOWN]
+
+# Only views and functions: the TimescaleDB extension is created by migration 0001.
+register_entities(ENTITIES, entity_types=[PGView, PGFunction])

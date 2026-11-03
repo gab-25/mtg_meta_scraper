@@ -5,6 +5,7 @@ from sqlalchemy import create_engine
 
 from mtg_meta_scraper.config import Settings
 from mtg_meta_scraper.db.engine import sqlalchemy_url
+from mtg_meta_scraper.db import sql_objects  # noqa: F401 - registers the view/functions with autogenerate
 from mtg_meta_scraper.db.tables import Base
 
 config = context.config
