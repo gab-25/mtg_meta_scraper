@@ -33,7 +33,10 @@ def _test_db_url():
             conn.execute(text(f'DROP DATABASE IF EXISTS "{url.database}" WITH (FORCE)'))
             conn.execute(text(f'CREATE DATABASE "{url.database}"'))
     except OperationalError as exc:
-        pytest.skip(f"DB di test non raggiungibile ({exc.orig}); avvia `docker compose up -d db`")
+        msg = f"DB di test non raggiungibile ({exc.orig}); avvia `docker compose up -d db`"
+        if os.environ.get("REQUIRE_TEST_DB"):  # in CI un DB assente è un errore, non un test saltato
+            pytest.fail(msg)
+        pytest.skip(msg)
     finally:
         admin.dispose()
     return TEST_DATABASE_URL

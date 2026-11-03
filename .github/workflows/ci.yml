@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      db:
+        image: timescale/timescaledb:2.17.2-pg16
+        env:
+          POSTGRES_USER: mtg_meta_scraper
+          POSTGRES_PASSWORD: mtg_meta_scraper
+          POSTGRES_DB: mtg_meta_scraper
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U mtg_meta_scraper -d mtg_meta_scraper"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      REQUIRE_TEST_DB: "1"
+      TEST_DATABASE_URL: postgresql://mtg_meta_scraper:mtg_meta_scraper@localhost:5432/mtg_meta_scraper_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+      - name: Install dependencies
+        run: uv sync --frozen --python 3.12
+      - name: Run tests
+        run: uv run pytest -v
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build image
+        run: docker build -t mtg-meta-scraper:ci .
+      - name: Smoke test
+        run: docker run --rm mtg-meta-scraper:ci python -m mtg_meta_scraper --help
