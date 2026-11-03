@@ -1,0 +1,15 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build image
+        run: docker build -t mtg-meta-scraper:${{ github.event.release.tag_name }} .
+      - name: Smoke test
+        run: docker run --rm mtg-meta-scraper:${{ github.event.release.tag_name }} python -m mtg_meta_scraper --help

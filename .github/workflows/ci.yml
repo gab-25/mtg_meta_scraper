@@ -3,8 +3,6 @@ name: CI
 on:
   push:
     branches: [main]
-  pull_request:
-  workflow_dispatch:
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -39,12 +37,3 @@ jobs:
         run: uv sync --frozen --python 3.12
       - name: Run tests
         run: uv run pytest -v
-
-  docker:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v5
-      - name: Build image
-        run: docker build -t mtg-meta-scraper:ci .
-      - name: Smoke test
-        run: docker run --rm mtg-meta-scraper:ci python -m mtg_meta_scraper --help
