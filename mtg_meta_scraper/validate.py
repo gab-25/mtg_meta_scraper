@@ -46,17 +46,7 @@ def compare_shares(
 
 
 def our_shares(repo: Repo, format_code: str, today: date) -> dict[str, float]:
-    rows = repo.conn.execute(
-        """
-        SELECT archetype_name, 100.0 * count(*) / sum(count(*)) OVER ()
-        FROM deck_facts
-        WHERE format_code = %s AND archetype_name IS NOT NULL AND event_date > %s
-        GROUP BY archetype_name
-        """,
-        (format_code, today - timedelta(days=PERIOD_DAYS)),
-    ).fetchall()
-    repo.conn.commit()
-    return {name: float(pct) for name, pct in rows}
+    return repo.archetype_shares(format_code, today - timedelta(days=PERIOD_DAYS))
 
 
 def validate(fetcher: Fetcher, repo: Repo, formats: Collection[str], today: date) -> list[ValidationRow]:

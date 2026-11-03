@@ -63,13 +63,33 @@ docker compose up -d db
 uv run pytest
 ```
 
-I test dei parser usano pagine reali di MTGTop8 salvate in `tests/fixtures/`. I test del database usano il database `mtg_meta_scraper_test`, creato in automatico, e vengono saltati se Postgres non è raggiungibile.
+I test dei parser usano pagine reali di MTGTop8 salvate in `tests/fixtures/`. I test del database usano il database `mtg_meta_scraper_test`, ricreato da zero a ogni esecuzione applicando le migrazioni, e vengono saltati se Postgres non è raggiungibile.
+
+### Database e migrazioni
+
+Le tabelle sono modelli SQLAlchemy in `mtg_meta_scraper/db/tables.py`; lo schema è gestito con Alembic. Lo scraper applica da solo le migrazioni mancanti a ogni avvio (anche `python -m mtg_meta_scraper init-db`).
+
+Per cambiare lo schema:
+
+```bash
+# 1. modifica mtg_meta_scraper/db/tables.py
+# 2. genera la migrazione (confronta i modelli con il DB indicato da DATABASE_URL, default localhost)
+uv run alembic revision --autogenerate -m "aggiungi colonna X"
+# 3. rileggi il file creato in mtg_meta_scraper/db/migrations/versions/ e applicala
+uv run alembic upgrade head
+```
+
+Il test `test_models_match_migrations` fallisce se i modelli e le migrazioni non coincidono.
+
+Le funzioni SQL usate da Grafana (`metrics.sql`) restano fuori dalle migrazioni: vengono ricreate a ogni avvio. La vista `deck_facts` dipende però dalle colonne di `deck`, `event` e `archetype`: una migrazione che le rinomina o cambia tipo deve prima eseguire `DROP VIEW IF EXISTS deck_facts CASCADE` (verrà ricreata al riavvio).
+
+Un database creato prima dell'introduzione di Alembic (con il vecchio `schema.sql`) ha nomi di indice diversi: se è vuoto conviene ricrearlo (`docker compose down -v`, **cancella i dati**), altrimenti va allineato a mano e poi marcato con `uv run alembic stamp head`.
 
 Struttura:
 
 - `mtg_meta_scraper/http.py`: client HTTP lento e con tentativi ripetuti.
 - `mtg_meta_scraper/parsing/`: lettura delle pagine evento, formato e home.
-- `mtg_meta_scraper/db/`: schema, metriche SQL e repository.
+- `mtg_meta_scraper/db/`: modelli ORM (`tables.py`), migrazioni Alembic (`migrations/`), metriche SQL e repository.
 - `mtg_meta_scraper/pipeline.py`: recupero storico e aggiornamento.
 - `mtg_meta_scraper/validate.py`: confronto con il sito.
 - `grafana/`: datasource e dashboard caricati in automatico.

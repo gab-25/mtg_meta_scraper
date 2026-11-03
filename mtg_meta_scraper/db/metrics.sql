@@ -1,4 +1,4 @@
--- Metriche del metagame. Eseguito da Repo.init_schema() dopo schema.sql (idempotente).
+-- Metriche del metagame. Eseguito da Repo.init_schema() dopo le migrazioni Alembic (idempotente).
 
 -- Pesi della performance: modificare QUI per cambiarli ovunque.
 CREATE OR REPLACE FUNCTION placement_points(rank_min int) RETURNS numeric

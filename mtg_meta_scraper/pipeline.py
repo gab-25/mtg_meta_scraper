@@ -97,7 +97,7 @@ def _scrape_event(fetcher, repo, event_id, formats, min_date) -> tuple[str, Pars
         return "done", ev
     except Exception:  # noqa: BLE001 - un evento rotto non deve fermare il backfill
         log.exception("evento %s: errore", event_id)
-        repo.conn.rollback()
+        repo.rollback()
         repo.mark_scan(event_id, "error")
         return "error", None
 
@@ -175,4 +175,4 @@ def _refresh_macro(fetcher: Fetcher, repo: Repo, code: str) -> None:
             repo.set_archetype_macro(parse_metagame(meta_page), code)
     except Exception:  # noqa: BLE001
         log.exception("formato %s: aggiornamento macro-categorie fallito", code)
-        repo.conn.rollback()
+        repo.rollback()

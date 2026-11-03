@@ -3,6 +3,7 @@ from datetime import date
 import httpx
 import pytest
 
+from conftest import scalar
 from mtg_meta_scraper.config import Settings
 from mtg_meta_scraper.pipeline import backfill, scrape_event, update
 
@@ -59,8 +60,8 @@ def test_scrape_event_saves_all_deck_details(repo, fake):
     scrape_event(fake, repo, 93105, ("MO",))
     assert fake.requests[0] == "event?e=93105"
     assert len(fake.requests) == 16  # pagina evento + 15 mazzi
-    assert repo.conn.execute("SELECT archetype_id FROM deck WHERE id = 907299").fetchone()[0] == 209
-    assert repo.conn.execute("SELECT count(*) FROM deck WHERE NOT detail_scraped").fetchone()[0] == 0
+    assert scalar(repo, "SELECT archetype_id FROM deck WHERE id = 907299") == 209
+    assert scalar(repo, "SELECT count(*) FROM deck WHERE NOT detail_scraped") == 0
     assert repo.scan_status(93105) == "done"
 
 
@@ -96,7 +97,7 @@ def test_backfill_stops_after_300_old_events(repo, load_fixture):
     assert stats.scanned == 300
     assert "event?e=700" not in f.requests
     # gli eventi oltre la finestra non vengono salvati né approfonditi
-    assert repo.conn.execute("SELECT count(*) FROM event").fetchone()[0] == 0
+    assert scalar(repo, "SELECT count(*) FROM event") == 0
     assert not any("&d=" in r for r in f.requests)
 
 
@@ -117,25 +118,24 @@ def test_update_rechecks_recent_events(repo, load_fixture):
     f.formats = {"format?f=MO": load_fixture("format_mo_meta51.html"),
                  "format?f=MO&meta=51": load_fixture("format_mo_meta51.html")}
     scrape_event(f, repo, 12, ("MO",))
-    repo.conn.execute("INSERT INTO scan_state (event_id, status) VALUES (12, 'done') ON CONFLICT DO NOTHING")
-    repo.conn.commit()
+    repo.mark_scan(12, "done")
     f.requests.clear()
     update(f, repo, settings(), TODAY)
     assert "event?e=12" in f.requests
     assert "format?f=MO&meta=51" in f.requests
-    assert repo.conn.execute("SELECT macro FROM archetype WHERE name = 'UR Aggro'").fetchone()[0] == "Aggro"
+    assert scalar(repo, "SELECT macro FROM archetype WHERE name = 'UR Aggro'") == "Aggro"
 
 
 def test_recheck_refetches_decks_without_archetype(repo, fake, load_fixture):
     uncategorised = load_fixture("event_mo_93105_d907299.html").replace("archetype?a=", "nothing?a=")
     fake.deck_html = lambda: uncategorised
     scrape_event(fake, repo, 93105, ("MO",))
-    assert repo.conn.execute("SELECT archetype_id FROM deck WHERE id = 907299").fetchone()[0] is None
+    assert scalar(repo, "SELECT archetype_id FROM deck WHERE id = 907299") is None
     fake.deck_html = lambda: load_fixture("event_mo_93105_d907299.html")
     fake.requests.clear()
     scrape_event(fake, repo, 93105, ("MO",))
     assert "event?e=93105&d=907299&f=MO" in fake.requests
-    assert repo.conn.execute("SELECT archetype_id FROM deck WHERE id = 907299").fetchone()[0] == 209
+    assert scalar(repo, "SELECT archetype_id FROM deck WHERE id = 907299") == 209
 
 
 def test_deck_page_unavailable_is_retried_on_next_scrape(repo, fake):

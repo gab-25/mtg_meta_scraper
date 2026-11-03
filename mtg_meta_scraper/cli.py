@@ -31,7 +31,7 @@ def _run_validate(settings: Settings) -> list[ValidationRow]:
         return validate(client, repo, settings.formats, _today())
     finally:
         client.close()
-        repo.conn.close()
+        repo.close()
 
 
 def _print_validation(rows: list[ValidationRow]) -> None:
@@ -64,10 +64,10 @@ def _run_scheduler(settings: Settings) -> None:
                 update(client, repo, settings, _today())
             except Exception:  # noqa: BLE001 - lo scheduler non deve morire
                 log.exception("aggiornamento fallito")
-                repo.conn.rollback()
+                repo.rollback()
     finally:
         client.close()
-        repo.conn.close()
+        repo.close()
         log.info("scheduler terminato")
 
 
@@ -97,7 +97,7 @@ def main(argv: list[str] | None = None) -> None:
             update(client, repo, settings, _today())
     finally:
         client.close()
-        repo.conn.close()
+        repo.close()
 
 
 if __name__ == "__main__":

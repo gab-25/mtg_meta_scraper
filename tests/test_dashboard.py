@@ -42,8 +42,8 @@ def test_dashboard_panel_sql_executes(repo):
     for sql in queries:
         final = _substitute(sql)
         assert not re.search(r"\$\w", final), final
-        repo.conn.execute(final).fetchall()
-        repo.conn.rollback()
+        with repo.session.begin():
+            repo.session.connection().exec_driver_sql(final).fetchall()
 
 
 def test_dashboard_variables_present():

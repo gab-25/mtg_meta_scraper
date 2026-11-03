@@ -1,0 +1,98 @@
+"""Modelli ORM delle tabelle. Ogni modifica qui richiede una migrazione Alembic."""
+
+from __future__ import annotations
+
+from datetime import date, datetime
+
+from sqlalchemy import CheckConstraint, DateTime, ForeignKey, Index, MetaData, SmallInteger, Text, false, func
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
+
+# Nomi dei vincoli stabili, così le migrazioni autogenerate restano confrontabili.
+NAMING_CONVENTION = {
+    "ix": "%(table_name)s_%(column_0_name)s_idx",
+    "uq": "%(table_name)s_%(column_0_name)s_key",
+    "ck": "%(table_name)s_%(constraint_name)s_check",
+    "fk": "%(table_name)s_%(column_0_name)s_fkey",
+    "pk": "%(table_name)s_pkey",
+}
+
+
+class Base(DeclarativeBase):
+    metadata = MetaData(naming_convention=NAMING_CONVENTION)
+    type_annotation_map = {str: Text(), datetime: DateTime(timezone=True)}
+
+
+class Format(Base):
+    __tablename__ = "format"
+
+    code: Mapped[str] = mapped_column(primary_key=True)
+    name: Mapped[str]
+
+
+class Event(Base):
+    __tablename__ = "event"
+    __table_args__ = (Index("event_format_date_idx", "format_code", "event_date"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    format_code: Mapped[str] = mapped_column(ForeignKey("format.code"))
+    name: Mapped[str]
+    event_date: Mapped[date]
+    players: Mapped[int | None]
+    source: Mapped[str | None]
+    stars: Mapped[int] = mapped_column(SmallInteger, server_default="0")
+    is_major: Mapped[bool] = mapped_column(server_default=false())
+    is_online: Mapped[bool | None]
+    is_league: Mapped[bool]
+    scraped_at: Mapped[datetime] = mapped_column(server_default=func.now())
+
+    decks: Mapped[list[Deck]] = relationship(back_populates="event", passive_deletes=True)
+
+
+class Archetype(Base):
+    __tablename__ = "archetype"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    format_code: Mapped[str] = mapped_column(ForeignKey("format.code"))
+    name: Mapped[str]
+    macro: Mapped[str | None]
+
+
+class Deck(Base):
+    __tablename__ = "deck"
+
+    id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    event_id: Mapped[int] = mapped_column(ForeignKey("event.id", ondelete="CASCADE"), index=True)
+    rank_raw: Mapped[str]
+    rank_min: Mapped[int]
+    rank_max: Mapped[int]
+    deck_name: Mapped[str]
+    player: Mapped[str]
+    archetype_id: Mapped[int | None] = mapped_column(ForeignKey("archetype.id"))
+    commander: Mapped[str | None]
+    detail_scraped: Mapped[bool] = mapped_column(server_default=false())
+
+    event: Mapped[Event] = relationship(back_populates="decks")
+    archetype: Mapped[Archetype | None] = relationship()
+    cards: Mapped[list[DeckCard]] = relationship(passive_deletes=True)
+
+
+class DeckCard(Base):
+    __tablename__ = "deck_card"
+    __table_args__ = (CheckConstraint("section IN ('main', 'side', 'commander')", name="section"),)
+
+    deck_id: Mapped[int] = mapped_column(ForeignKey("deck.id", ondelete="CASCADE"), primary_key=True)
+    section: Mapped[str] = mapped_column(primary_key=True)
+    card_name: Mapped[str] = mapped_column(primary_key=True)
+    qty: Mapped[int]
+
+
+class ScanState(Base):
+    __tablename__ = "scan_state"
+    __table_args__ = (CheckConstraint("status IN ('done', 'missing', 'skipped', 'error')", name="status"),)
+
+    event_id: Mapped[int] = mapped_column(primary_key=True, autoincrement=False)
+    status: Mapped[str]
+    format_label: Mapped[str | None]
+    event_date: Mapped[date | None]
+    attempts: Mapped[int] = mapped_column(server_default="0")
+    updated_at: Mapped[datetime] = mapped_column(server_default=func.now())
