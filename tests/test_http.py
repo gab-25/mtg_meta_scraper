@@ -77,7 +77,7 @@ def test_sends_user_agent():
 
 def test_settings_from_env_parses_formats(monkeypatch):
     monkeypatch.setenv("DATABASE_URL", "postgresql://x")
-    monkeypatch.setenv("MTGMETA_FORMATS", "MO,cEDH")
+    monkeypatch.setenv("MTG_META_SCRAPER_FORMATS", "MO,cEDH")
     s = Settings.from_env()
     assert s.formats == ("MO", "cEDH")
     assert s.request_interval == 1.5

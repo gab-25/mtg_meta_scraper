@@ -4,15 +4,15 @@ services:
   db:
     image: timescale/timescaledb:2.17.2-pg16
     environment:
-      POSTGRES_USER: mtgmeta
-      POSTGRES_PASSWORD: mtgmeta
-      POSTGRES_DB: mtgmeta
+      POSTGRES_USER: mtg_meta_scraper
+      POSTGRES_PASSWORD: mtg_meta_scraper
+      POSTGRES_DB: mtg_meta_scraper
     ports:
       - "127.0.0.1:5432:5432"
     volumes:
       - pgdata:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U mtgmeta -d mtgmeta"]
+      test: ["CMD-SHELL", "pg_isready -U mtg_meta_scraper -d mtg_meta_scraper"]
       interval: 5s
       timeout: 5s
       retries: 20
@@ -21,12 +21,12 @@ services:
   scraper:
     build: .
     environment:
-      DATABASE_URL: postgresql://mtgmeta:mtgmeta@db:5432/mtgmeta
-      MTGMETA_REQUEST_INTERVAL: ${MTGMETA_REQUEST_INTERVAL:-1.5}
-      MTGMETA_BACKFILL_DAYS: ${MTGMETA_BACKFILL_DAYS:-183}
-      MTGMETA_FORMATS: ${MTGMETA_FORMATS:-ST,PI,MO,LE,VI,PAU,EDH,cEDH}
-      MTGMETA_RECHECK_DAYS: ${MTGMETA_RECHECK_DAYS:-3}
-      MTGMETA_UPDATE_HOUR_UTC: ${MTGMETA_UPDATE_HOUR_UTC:-6}
+      DATABASE_URL: postgresql://mtg_meta_scraper:mtg_meta_scraper@db:5432/mtg_meta_scraper
+      MTG_META_SCRAPER_REQUEST_INTERVAL: ${MTG_META_SCRAPER_REQUEST_INTERVAL:-1.5}
+      MTG_META_SCRAPER_BACKFILL_DAYS: ${MTG_META_SCRAPER_BACKFILL_DAYS:-183}
+      MTG_META_SCRAPER_FORMATS: ${MTG_META_SCRAPER_FORMATS:-ST,PI,MO,LE,VI,PAU,EDH,cEDH}
+      MTG_META_SCRAPER_RECHECK_DAYS: ${MTG_META_SCRAPER_RECHECK_DAYS:-3}
+      MTG_META_SCRAPER_UPDATE_HOUR_UTC: ${MTG_META_SCRAPER_UPDATE_HOUR_UTC:-6}
     depends_on:
       db:
         condition: service_healthy

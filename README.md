@@ -24,7 +24,7 @@ docker compose up -d --build
 
 - Grafana: <http://localhost:3000> (visibile senza login; per modificare usa admin / `GF_ADMIN_PASSWORD`).
 - Al primo avvio lo scraper recupera gli **ultimi 6 mesi**. Fa circa una richiesta ogni 1,5 s e ne serve una per ogni mazzo, quindi il recupero richiede **molte ore** (indicativamente una giornata). Procede dagli eventi più recenti ai più vecchi, quindi la dashboard si riempie subito con i dati recenti. Se si interrompe, riparte da dove era arrivato.
-- Dopo il recupero iniziale l'aggiornamento gira ogni giorno all'ora `MTGMETA_UPDATE_HOUR_UTC` (UTC). Raccoglie i tornei nuovi e ricontrolla quelli degli ultimi `MTGMETA_RECHECK_DAYS` giorni.
+- Dopo il recupero iniziale l'aggiornamento gira ogni giorno all'ora `MTG_META_SCRAPER_UPDATE_HOUR_UTC` (UTC). Raccoglie i tornei nuovi e ricontrolla quelli degli ultimi `MTG_META_SCRAPER_RECHECK_DAYS` giorni.
 
 Log: `docker compose logs -f scraper`.
 
@@ -46,11 +46,11 @@ Postgres (`5432`) e Grafana (`3000`) sono esposti solo su `127.0.0.1`.
 
 | Variabile | Default | Significato |
 |---|---|---|
-| `MTGMETA_FORMATS` | `ST,PI,MO,LE,VI,PAU,EDH,cEDH` | Formati da raccogliere |
-| `MTGMETA_BACKFILL_DAYS` | `183` | Profondità del recupero storico |
-| `MTGMETA_REQUEST_INTERVAL` | `1.5` | Secondi tra due richieste (non abbassarlo troppo) |
-| `MTGMETA_RECHECK_DAYS` | `3` | Giorni di tornei da ricontrollare a ogni aggiornamento |
-| `MTGMETA_UPDATE_HOUR_UTC` | `6` | Ora dell'aggiornamento giornaliero |
+| `MTG_META_SCRAPER_FORMATS` | `ST,PI,MO,LE,VI,PAU,EDH,cEDH` | Formati da raccogliere |
+| `MTG_META_SCRAPER_BACKFILL_DAYS` | `183` | Profondità del recupero storico |
+| `MTG_META_SCRAPER_REQUEST_INTERVAL` | `1.5` | Secondi tra due richieste (non abbassarlo troppo) |
+| `MTG_META_SCRAPER_RECHECK_DAYS` | `3` | Giorni di tornei da ricontrollare a ogni aggiornamento |
+| `MTG_META_SCRAPER_UPDATE_HOUR_UTC` | `6` | Ora dell'aggiornamento giornaliero |
 | `GF_ADMIN_PASSWORD` | `admin` | Password admin di Grafana |
 
 I **pesi della performance** si trovano in un solo posto, la funzione `placement_points` in `src/mtg_meta_scraper/db/metrics.sql`. Le funzioni vengono ricreate a ogni avvio dello scraper.
@@ -63,7 +63,7 @@ docker compose up -d db
 uv run pytest
 ```
 
-I test dei parser usano pagine reali di MTGTop8 salvate in `tests/fixtures/`. I test del database usano il database `mtgmeta_test`, creato in automatico, e vengono saltati se Postgres non è raggiungibile.
+I test dei parser usano pagine reali di MTGTop8 salvate in `tests/fixtures/`. I test del database usano il database `mtg_meta_scraper_test`, creato in automatico, e vengono saltati se Postgres non è raggiungibile.
 
 Struttura:
 

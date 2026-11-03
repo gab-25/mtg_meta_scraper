@@ -21,12 +21,12 @@ class Settings:
     @classmethod
     def from_env(cls) -> Settings:
         env = os.environ
-        formats = env.get("MTGMETA_FORMATS")
+        formats = env.get("MTG_META_SCRAPER_FORMATS")
         return cls(
-            database_url=env.get("DATABASE_URL", "postgresql://mtgmeta:mtgmeta@localhost:5432/mtgmeta"),
-            request_interval=float(env.get("MTGMETA_REQUEST_INTERVAL", "1.5")),
-            backfill_days=int(env.get("MTGMETA_BACKFILL_DAYS", "183")),
+            database_url=env.get("DATABASE_URL", "postgresql://mtg_meta_scraper:mtg_meta_scraper@localhost:5432/mtg_meta_scraper"),
+            request_interval=float(env.get("MTG_META_SCRAPER_REQUEST_INTERVAL", "1.5")),
+            backfill_days=int(env.get("MTG_META_SCRAPER_BACKFILL_DAYS", "183")),
             formats=tuple(f.strip() for f in formats.split(",") if f.strip()) if formats else DEFAULT_FORMATS,
-            recheck_days=int(env.get("MTGMETA_RECHECK_DAYS", "3")),
-            update_hour_utc=int(env.get("MTGMETA_UPDATE_HOUR_UTC", "6")),
+            recheck_days=int(env.get("MTG_META_SCRAPER_RECHECK_DAYS", "3")),
+            update_hour_utc=int(env.get("MTG_META_SCRAPER_UPDATE_HOUR_UTC", "6")),
         )

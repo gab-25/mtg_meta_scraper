@@ -18,7 +18,7 @@ import os  # noqa: E402
 import psycopg  # noqa: E402
 
 TEST_DATABASE_URL = os.environ.get(
-    "TEST_DATABASE_URL", "postgresql://mtgmeta:mtgmeta@localhost:5432/mtgmeta_test"
+    "TEST_DATABASE_URL", "postgresql://mtg_meta_scraper:mtg_meta_scraper@localhost:5432/mtg_meta_scraper_test"
 )
 
 
