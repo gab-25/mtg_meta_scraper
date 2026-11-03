@@ -1,61 +1,61 @@
 # MTG Meta Scraper
 
-Raccoglie da [MTGTop8](https://mtgtop8.com/) i risultati dei tornei dei formati competitive di Magic, li salva su TimescaleDB e li mostra in una dashboard Grafana per capire **quali mazzi stanno scalando il meta**.
+Collects tournament results for Magic's competitive formats from [MTGTop8](https://mtgtop8.com/), stores them in TimescaleDB and shows them in a Grafana dashboard to see **which decks are climbing the meta**.
 
-Formati: Standard, Pioneer, Modern, Legacy, Vintage, Pauper, Duel Commander, cEDH.
+Formats: Standard, Pioneer, Modern, Legacy, Vintage, Pauper, Duel Commander, cEDH.
 
-## Cosa mostra la dashboard
+## What the dashboard shows
 
-- **Quota di meta (%)**: percentuale dei mazzi di un formato che appartengono a ogni archetipo, nel tempo (MTGO League incluse).
-- **Performance**: punti medi per piazzamento (1° = 8, 2° = 6, 3-4 = 4, 5-8 = 2, 9-16 = 1, oltre = 0.5), nel tempo. MTGO League escluse. È un sostituto del winrate, che MTGTop8 non pubblica.
-- **Mazzi in salita**: ultimo periodo contro quello precedente, con variazione di quota, di performance e % di vittorie di torneo.
-- **Dettaglio**: i nomi di mazzo che compongono un archetipo.
+- **Meta share (%)**: percentage of a format's decks that belong to each archetype, over time (MTGO Leagues included).
+- **Performance**: average points per placement (1st = 8, 2nd = 6, 3-4 = 4, 5-8 = 2, 9-16 = 1, below = 0.5), over time. MTGO Leagues excluded. It stands in for winrate, which MTGTop8 does not publish.
+- **Rising decks**: last period versus the previous one, with the change in share, performance and % of tournament wins.
+- **Detail**: the deck names that make up an archetype.
 
-Gli archetipi sono le categorie di MTGTop8 (es. "Rakdos Aggro"). In Duel Commander e cEDH si raggruppa per **comandante**: le coppie partner contano come una voce sola.
+Archetypes are MTGTop8's categories (e.g. "Rakdos Aggro"). In Duel Commander and cEDH decks are grouped by **commander**: partner pairs count as a single entry.
 
-Variabili in alto: formato, bucket temporale, top N archetipi, periodo "in salita", mazzi minimi. Per i formati Commander conviene alzare "Mazzi minimi" e abbassare "Top N", perché i comandanti sono molti e con pochi mazzi ciascuno.
+Variables at the top: format, time bucket, top N archetypes, "rising" period, minimum decks. For Commander formats it helps to raise "Minimum decks" and lower "Top N", since there are many commanders with few decks each.
 
-## Avvio
+## Getting started
 
 ```bash
-cp .env.example .env        # opzionale: cambia password Grafana, formati, ritmo
+cp .env.example .env        # optional: change the Grafana password, formats, request rate
 docker compose up -d --build
 ```
 
-- Grafana: <http://localhost:3000> (visibile senza login; per modificare usa admin / `GF_ADMIN_PASSWORD`).
-- Al primo avvio lo scraper recupera gli **ultimi 30 giorni**. Fa circa una richiesta ogni 1,5 s e ne serve una per ogni mazzo, quindi il recupero richiede **qualche ora** (indicativamente 3-4). Procede dagli eventi più recenti ai più vecchi, quindi la dashboard si riempie subito con i dati recenti. Se si interrompe, riparte da dove era arrivato. Per uno storico più lungo alza `MTG_META_SCRAPER_BACKFILL_DAYS` (es. `183` per 6 mesi: circa una giornata). L'aggiornamento giornaliero non cancella i dati vecchi, quindi lo storico si allunga da solo.
-- Dopo il recupero iniziale l'aggiornamento gira ogni giorno all'ora `MTG_META_SCRAPER_UPDATE_HOUR_UTC` (UTC). Raccoglie i tornei nuovi e ricontrolla quelli degli ultimi `MTG_META_SCRAPER_RECHECK_DAYS` giorni.
+- Grafana: <http://localhost:3000> (viewable without login; to edit, use admin / `GF_ADMIN_PASSWORD`).
+- On first start the scraper backfills the **last 30 days**. It makes roughly one request every 1.5 s and needs one per deck, so the backfill takes **a few hours** (about 3-4). It goes from the most recent events to the oldest, so the dashboard fills up with recent data right away. If interrupted, it resumes where it left off. For a longer history raise `MTG_META_SCRAPER_BACKFILL_DAYS` (e.g. `183` for 6 months: about a day). The daily update never deletes old data, so the history grows on its own.
+- After the initial backfill, the update runs every day at `MTG_META_SCRAPER_UPDATE_HOUR_UTC` (UTC). It collects new tournaments and rechecks those from the last `MTG_META_SCRAPER_RECHECK_DAYS` days.
 
-Log: `docker compose logs -f scraper`.
+Logs: `docker compose logs -f scraper`.
 
-## Comandi
+## Commands
 
 ```bash
-docker compose exec scraper python -m mtg_meta_scraper validate   # confronta le nostre quote con quelle del sito
+docker compose exec scraper python -m mtg_meta_scraper validate   # compare our shares with the site's
 ```
 
-Il container `scraper` esegue già da solo recupero storico e aggiornamento giornaliero: **non** lanciare `python -m mtg_meta_scraper backfill` o `python -m mtg_meta_scraper update` mentre è in esecuzione, altrimenti le richieste al sito raddoppiano. Per lanciarli a mano: `docker compose stop scraper`, poi `docker compose run --rm scraper python -m mtg_meta_scraper update` (o `backfill`), poi `docker compose start scraper`.
+The `scraper` container already runs the backfill and the daily update on its own: do **not** run `python -m mtg_meta_scraper backfill` or `python -m mtg_meta_scraper update` while it is running, or requests to the site will double. To run them by hand: `docker compose stop scraper`, then `docker compose run --rm scraper python -m mtg_meta_scraper update` (or `backfill`), then `docker compose start scraper`.
 
-Se lo scraper trova 100 pagine di fila mancanti o in errore (sito giù, blocco, HTML cambiato) si ferma da solo per non martellare il sito e riprova al giro successivo.
+If the scraper hits 100 missing or failing pages in a row (site down, blocked, HTML changed) it stops by itself to avoid hammering the site, and retries on the next run.
 
-Postgres (`5432`) e Grafana (`3000`) sono esposti solo su `127.0.0.1`.
+Postgres (`5432`) and Grafana (`3000`) are exposed on `127.0.0.1` only.
 
-`validate` confronta, per ogni formato, i primi 10 archetipi del "Metagame Breakdown – Last 2 Months" del sito con le nostre percentuali sugli ultimi 60 giorni. Segnala `SCARTO` oltre ±2 punti ed esce con codice 1. Finché il recupero storico non è completo, o se copre meno di 60 giorni (come con il default di 30), gli scarti sono attesi.
+For each format, `validate` compares the top 10 archetypes of the site's "Metagame Breakdown – Last 2 Months" with our percentages over the last 60 days. It flags a `MISMATCH` beyond ±2 points and exits with code 1. Until the backfill is complete, or if it covers fewer than 60 days (as with the default of 30), mismatches are expected.
 
-## Configurazione
+## Configuration
 
-| Variabile | Default | Significato |
+| Variable | Default | Meaning |
 |---|---|---|
-| `MTG_META_SCRAPER_FORMATS` | `ST,PI,MO,LE,VI,PAU,EDH,cEDH` | Formati da raccogliere |
-| `MTG_META_SCRAPER_BACKFILL_DAYS` | `30` | Profondità del recupero storico |
-| `MTG_META_SCRAPER_REQUEST_INTERVAL` | `1.5` | Secondi tra due richieste (non abbassarlo troppo) |
-| `MTG_META_SCRAPER_RECHECK_DAYS` | `3` | Giorni di tornei da ricontrollare a ogni aggiornamento |
-| `MTG_META_SCRAPER_UPDATE_HOUR_UTC` | `6` | Ora dell'aggiornamento giornaliero |
-| `GF_ADMIN_PASSWORD` | `admin` | Password admin di Grafana |
+| `MTG_META_SCRAPER_FORMATS` | `ST,PI,MO,LE,VI,PAU,EDH,cEDH` | Formats to collect |
+| `MTG_META_SCRAPER_BACKFILL_DAYS` | `30` | Backfill depth |
+| `MTG_META_SCRAPER_REQUEST_INTERVAL` | `1.5` | Seconds between two requests (don't lower it too much) |
+| `MTG_META_SCRAPER_RECHECK_DAYS` | `3` | Days of tournaments to recheck on each update |
+| `MTG_META_SCRAPER_UPDATE_HOUR_UTC` | `6` | Hour of the daily update |
+| `GF_ADMIN_PASSWORD` | `admin` | Grafana admin password |
 
-I **pesi della performance** si trovano in un solo posto, la funzione `placement_points` in `mtg_meta_scraper/db/metrics.sql`. Le funzioni vengono ricreate a ogni avvio dello scraper.
+The **performance weights** live in a single place, the `placement_points` function in `mtg_meta_scraper/db/metrics.sql`. The functions are recreated every time the scraper starts.
 
-## Sviluppo
+## Development
 
 ```bash
 uv sync
@@ -63,33 +63,33 @@ docker compose up -d db
 uv run pytest
 ```
 
-I test dei parser usano pagine reali di MTGTop8 salvate in `tests/fixtures/`. I test del database usano il database `mtg_meta_scraper_test`, ricreato da zero a ogni esecuzione applicando le migrazioni, e vengono saltati se Postgres non è raggiungibile.
+Parser tests use real MTGTop8 pages saved in `tests/fixtures/`. Database tests use the `mtg_meta_scraper_test` database, recreated from scratch on every run by applying the migrations, and are skipped if Postgres is unreachable.
 
-### Database e migrazioni
+### Database and migrations
 
-Le tabelle sono modelli SQLAlchemy in `mtg_meta_scraper/db/tables.py`; lo schema è gestito con Alembic. Lo scraper applica da solo le migrazioni mancanti a ogni avvio (anche `python -m mtg_meta_scraper init-db`).
+Tables are SQLAlchemy models in `mtg_meta_scraper/db/tables.py`; the schema is managed with Alembic. The scraper applies any pending migrations by itself on every start (so does `python -m mtg_meta_scraper init-db`).
 
-Per cambiare lo schema:
+To change the schema:
 
 ```bash
-# 1. modifica mtg_meta_scraper/db/tables.py
-# 2. genera la migrazione (confronta i modelli con il DB indicato da DATABASE_URL, default localhost)
-uv run alembic revision --autogenerate -m "aggiungi colonna X"
-# 3. rileggi il file creato in mtg_meta_scraper/db/migrations/versions/ e applicala
+# 1. edit mtg_meta_scraper/db/tables.py
+# 2. generate the migration (compares the models with the DB in DATABASE_URL, default localhost)
+uv run alembic revision --autogenerate -m "add column X"
+# 3. review the new file in mtg_meta_scraper/db/migrations/versions/ and apply it
 uv run alembic upgrade head
 ```
 
-Il test `test_models_match_migrations` fallisce se i modelli e le migrazioni non coincidono.
+The `test_models_match_migrations` test fails if the models and the migrations don't match.
 
-Le funzioni SQL usate da Grafana (`metrics.sql`) restano fuori dalle migrazioni: vengono ricreate a ogni avvio. La vista `deck_facts` dipende però dalle colonne di `deck`, `event` e `archetype`: una migrazione che le rinomina o cambia tipo deve prima eseguire `DROP VIEW IF EXISTS deck_facts CASCADE` (verrà ricreata al riavvio).
+The SQL functions used by Grafana (`metrics.sql`) stay outside the migrations: they are recreated on every start. The `deck_facts` view does depend on the columns of `deck`, `event` and `archetype`, though: a migration that renames them or changes their type must first run `DROP VIEW IF EXISTS deck_facts CASCADE` (it will be recreated on restart).
 
-Un database creato prima dell'introduzione di Alembic (con il vecchio `schema.sql`) ha nomi di indice diversi: se è vuoto conviene ricrearlo (`docker compose down -v`, **cancella i dati**), altrimenti va allineato a mano e poi marcato con `uv run alembic stamp head`.
+A database created before Alembic was introduced (with the old `schema.sql`) has different index names: if it is empty, recreate it (`docker compose down -v`, **deletes the data**); otherwise align it by hand and then mark it with `uv run alembic stamp head`.
 
-Struttura:
+Layout:
 
-- `mtg_meta_scraper/http.py`: client HTTP lento e con tentativi ripetuti.
-- `mtg_meta_scraper/parsing/`: lettura delle pagine evento, formato e home.
-- `mtg_meta_scraper/db/`: modelli ORM (`tables.py`), migrazioni Alembic (`migrations/`), metriche SQL e repository.
-- `mtg_meta_scraper/pipeline.py`: recupero storico e aggiornamento.
-- `mtg_meta_scraper/validate.py`: confronto con il sito.
-- `grafana/`: datasource e dashboard caricati in automatico.
+- `mtg_meta_scraper/http.py`: slow HTTP client with retries.
+- `mtg_meta_scraper/parsing/`: parsing of the event, format and home pages.
+- `mtg_meta_scraper/db/`: ORM models (`tables.py`), Alembic migrations (`migrations/`), SQL metrics and repository.
+- `mtg_meta_scraper/pipeline.py`: backfill and update.
+- `mtg_meta_scraper/validate.py`: comparison with the site.
+- `grafana/`: automatically provisioned datasource and dashboard.

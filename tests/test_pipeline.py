@@ -11,7 +11,7 @@ TODAY = date(2026, 11, 3)
 
 
 class FakeFetcher:
-    """Restituisce HTML per path; registra le richieste."""
+    """Return HTML by path; record the requests."""
 
     def __init__(self, load_fixture, latest: int = 93105, events: dict | None = None, default=None):
         self.load = load_fixture
@@ -59,7 +59,7 @@ def fake(load_fixture):
 def test_scrape_event_saves_all_deck_details(repo, fake):
     scrape_event(fake, repo, 93105, ("MO",))
     assert fake.requests[0] == "event?e=93105"
-    assert len(fake.requests) == 16  # pagina evento + 15 mazzi
+    assert len(fake.requests) == 16  # event page + 15 decks
     assert scalar(repo, "SELECT archetype_id FROM deck WHERE id = 907299") == 209
     assert scalar(repo, "SELECT count(*) FROM deck WHERE NOT detail_scraped") == 0
     assert repo.scan_status(93105) == "done"
@@ -96,7 +96,7 @@ def test_backfill_stops_after_300_old_events(repo, load_fixture):
     stats = backfill(f, repo, settings(), TODAY)
     assert stats.scanned == 300
     assert "event?e=700" not in f.requests
-    # gli eventi oltre la finestra non vengono salvati né approfonditi
+    # events outside the window are neither stored nor drilled into
     assert scalar(repo, "SELECT count(*) FROM event") == 0
     assert not any("&d=" in r for r in f.requests)
 

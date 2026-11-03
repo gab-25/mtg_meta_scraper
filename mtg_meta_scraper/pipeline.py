@@ -1,4 +1,4 @@
-"""Pipeline di scraping: singolo evento, backfill riprendibile, aggiornamento giornaliero."""
+"""Scraping pipeline: single event, resumable backfill, daily update."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ log = logging.getLogger("mtg_meta_scraper")
 
 MAX_ATTEMPTS = 3
 OLD_EVENTS_STOP = 300
-# Interruttore di sicurezza: tante pagine mancanti o in errore di fila = sito giù, blocco o HTML cambiato.
+# Circuit breaker: many missing/failed pages in a row = site down, blocked, or HTML changed.
 MAX_CONSECUTIVE_FAILURES = 100
 META_PERIOD_LABEL = "Last 2 Months"
 
@@ -52,8 +52,8 @@ class BackfillStats:
     def should_abort(self) -> bool:
         if self.failure_streak >= MAX_CONSECUTIVE_FAILURES:
             log.error(
-                "%s pagine mancanti/in errore di fila: interrompo per non martellare il sito "
-                "(sito giù, blocco o HTML cambiato?)",
+                "%s missing/failed pages in a row: stopping to avoid hammering the site "
+                "(site down, blocked, or HTML changed?)",
                 self.failure_streak,
             )
             self.aborted = True
@@ -67,10 +67,10 @@ def scrape_event(
     formats: Collection[str],
     min_date: date | None = None,
 ) -> ParsedEvent | None:
-    """Scarica e salva un evento con i dettagli dei mazzi. Non solleva: gli errori finiscono in scan_state."""
+    """Fetch and store an event with its deck details. Never raises: errors are recorded in scan_state."""
     status, ev = _scrape_event(fetcher, repo, event_id, formats, min_date)
     log.info(
-        "evento %s: %s, formato=%s, mazzi=%s",
+        "event %s: %s, format=%s, decks=%s",
         event_id, status, ev.format_label if ev else "-", len(ev.decks) if ev else 0,
     )
     return ev if status == "done" else None
@@ -95,8 +95,8 @@ def _scrape_event(fetcher, repo, event_id, formats, min_date) -> tuple[str, Pars
                 repo.save_deck_detail(event_id, ev.format_code, parse_deck_detail(deck_html, deck_id))
         repo.mark_scan(event_id, "done", ev.format_label, ev.event_date)
         return "done", ev
-    except Exception:  # noqa: BLE001 - un evento rotto non deve fermare il backfill
-        log.exception("evento %s: errore", event_id)
+    except Exception:  # noqa: BLE001 - one broken event must not stop the backfill
+        log.exception("event %s: error", event_id)
         repo.rollback()
         repo.mark_scan(event_id, "error")
         return "error", None
@@ -105,12 +105,12 @@ def _scrape_event(fetcher, repo, event_id, formats, min_date) -> tuple[str, Pars
 def _latest_event_id(fetcher: Fetcher) -> int:
     html = fetcher.get_text("")
     if not html:
-        raise RuntimeError("home page MTGTop8 non disponibile")
+        raise RuntimeError("MTGTop8 home page unavailable")
     return parse_latest_event_id(html)
 
 
 def backfill(fetcher: Fetcher, repo: Repo, settings: Settings, today: date) -> BackfillStats:
-    """Scorre gli ID evento all'indietro finché trova OLD_EVENTS_STOP eventi consecutivi fuori finestra."""
+    """Walk event IDs backwards until OLD_EVENTS_STOP consecutive events fall outside the window."""
     cutoff = today - timedelta(days=settings.backfill_days)
     stats = BackfillStats()
     old_streak = 0
@@ -125,11 +125,11 @@ def backfill(fetcher: Fetcher, repo: Repo, settings: Settings, today: date) -> B
                 continue
         status, ev = _scrape_event(fetcher, repo, event_id, settings.formats, cutoff)
         stats.add(status)
-        log.info("backfill evento %s: %s (%s)", event_id, status, ev.event_date if ev else "-")
+        log.info("backfill event %s: %s (%s)", event_id, status, ev.event_date if ev else "-")
         old_streak = _update_streak(old_streak, ev.event_date if ev else None, cutoff)
         if old_streak >= OLD_EVENTS_STOP or stats.should_abort():
             break
-    log.info("backfill concluso: %s", stats)
+    log.info("backfill finished: %s", stats)
     return stats
 
 
@@ -140,7 +140,7 @@ def _update_streak(streak: int, ev_date: date | None, cutoff: date) -> int:
 
 
 def update(fetcher: Fetcher, repo: Repo, settings: Settings, today: date) -> BackfillStats:
-    """Eventi nuovi + ricontrollo degli ultimi giorni + macro-categorie dalle pagine formato."""
+    """New events + recheck of the last few days + macro-categories from the format pages."""
     cutoff = today - timedelta(days=settings.backfill_days)
     stats = BackfillStats()
     latest = _latest_event_id(fetcher)
@@ -159,7 +159,7 @@ def update(fetcher: Fetcher, repo: Repo, settings: Settings, today: date) -> Bac
 
     for code in settings.formats:
         _refresh_macro(fetcher, repo, code)
-    log.info("update concluso: %s", stats)
+    log.info("update finished: %s", stats)
     return stats
 
 
@@ -168,11 +168,11 @@ def _refresh_macro(fetcher: Fetcher, repo: Repo, code: str) -> None:
         page = fetcher.get_text(f"format?f={code}")
         meta_id = parse_meta_periods(page).get(META_PERIOD_LABEL) if page else None
         if meta_id is None:
-            log.warning("formato %s: periodo %r non trovato", code, META_PERIOD_LABEL)
+            log.warning("format %s: period %r not found", code, META_PERIOD_LABEL)
             return
         meta_page = fetcher.get_text(f"format?f={code}&meta={meta_id}")
         if meta_page:
             repo.set_archetype_macro(parse_metagame(meta_page), code)
     except Exception:  # noqa: BLE001
-        log.exception("formato %s: aggiornamento macro-categorie fallito", code)
+        log.exception("format %s: macro-category refresh failed", code)
         repo.rollback()

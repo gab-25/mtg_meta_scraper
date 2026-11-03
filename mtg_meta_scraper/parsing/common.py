@@ -1,4 +1,4 @@
-"""Utility di parsing condivise."""
+"""Shared parsing utilities."""
 
 from __future__ import annotations
 
@@ -22,7 +22,7 @@ def parse_rank(raw: str) -> tuple[int, int]:
     """'1' -> (1, 1); '3-4' -> (3, 4)."""
     parts = [int(p) for p in re.findall(r"\d+", raw)]
     if not parts:
-        raise ValueError(f"rank non valido: {raw!r}")
+        raise ValueError(f"invalid rank: {raw!r}")
     return parts[0], parts[-1]
 
 
@@ -30,13 +30,13 @@ def parse_site_date(raw: str) -> date:
     """'DD/MM/YY' -> date(20YY, MM, DD)."""
     m = re.fullmatch(r"\s*(\d{2})/(\d{2})/(\d{2})\s*", raw)
     if not m:
-        raise ValueError(f"data non valida: {raw!r}")
+        raise ValueError(f"invalid date: {raw!r}")
     d, mo, y = (int(x) for x in m.groups())
     return date(2000 + y, mo, d)
 
 
 def query_int(href: str, key: str) -> int | None:
-    """Valore intero di un parametro di query in un href relativo."""
+    """Integer value of a query parameter in a relative href."""
     vals = parse_qs(urlparse(href).query).get(key)
     if not vals:
         return None

@@ -1,4 +1,4 @@
-"""initial schema: tabelle, estensione TimescaleDB e formati raccolti
+"""initial schema: tables, TimescaleDB extension and collected formats
 
 Revision ID: 0001
 Revises: 
@@ -99,7 +99,7 @@ def upgrade() -> None:
 
 def downgrade() -> None:
     """Downgrade schema."""
-    # Oggetti di metrics.sql (ricreati a ogni avvio) che dipendono dalle tabelle.
+    # metrics.sql objects (recreated on every start) that depend on the tables.
     op.execute("DROP VIEW IF EXISTS deck_facts CASCADE")
     for fn in ("meta_share_series", "performance_series", "rising", "group_breakdown", "placement_points"):
         op.execute(f"DROP FUNCTION IF EXISTS {fn} CASCADE")

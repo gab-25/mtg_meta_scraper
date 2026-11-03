@@ -1,4 +1,4 @@
-"""Parser della pagina evento di MTGTop8 (`event?e=<id>[&d=<deck>]`)."""
+"""Parser for the MTGTop8 event page (`event?e=<id>[&d=<deck>]`)."""
 
 from __future__ import annotations
 
@@ -54,7 +54,7 @@ def parse_event(html: str, event_id: int) -> ParsedEvent | None:
     name = _text(titles[0])
     decks = tuple(_parse_deck_rows(tree))
     shown_id = decks[0].deck_id if decks else None
-    # La pagina senza `d` mostra il mazzo #1; con `d` il chiamante usa parse_deck_detail.
+    # Without `d` the page shows deck #1; with `d` the caller uses parse_deck_detail.
     shown = parse_deck_detail(html, shown_id) if shown_id is not None else None
 
     return ParsedEvent(
@@ -98,7 +98,7 @@ def _parse_deck_rows(tree: HTMLParser) -> list[DeckRow]:
 
 
 def parse_deck_detail(html: str, deck_id: int) -> DeckDetail:
-    """Dettaglio (archetipo + lista) del mazzo mostrato nella pagina."""
+    """Detail (archetype + list) of the deck shown on the page."""
     tree = HTMLParser(html)
     arch_id = arch_name = None
     for a in tree.css("a"):

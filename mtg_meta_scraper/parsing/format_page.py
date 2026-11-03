@@ -1,4 +1,4 @@
-"""Parser della pagina formato (`format?f=<code>[&meta=<id>]`) e della home."""
+"""Parser for the format page (`format?f=<code>[&meta=<id>]`) and the home page."""
 
 from __future__ import annotations
 
@@ -14,7 +14,7 @@ _PCT = re.compile(r"^([\d.]+)\s*%$")
 
 
 def parse_metagame(html: str) -> list[MetaShare]:
-    """Metagame breakdown: archetipi in ordine di pagina con quota e macro-categoria."""
+    """Metagame breakdown: archetypes in page order with share and macro-category."""
     tree = HTMLParser(html)
     shares: list[MetaShare] = []
     macro: str | None = None
@@ -41,7 +41,7 @@ def parse_metagame(html: str) -> list[MetaShare]:
 
 
 def parse_meta_periods(html: str) -> dict[str, int]:
-    """Selettore dei periodi: testo -> id `meta`."""
+    """Period selector: label -> `meta` id."""
     tree = HTMLParser(html)
     periods: dict[str, int] = {}
     for a in tree.css("#metas_list a"):
@@ -55,5 +55,5 @@ def parse_meta_periods(html: str) -> dict[str, int]:
 def parse_latest_event_id(html: str) -> int:
     ids = [int(x) for x in re.findall(r"event\?e=(\d+)", html)]
     if not ids:
-        raise ValueError("nessun link evento trovato")
+        raise ValueError("no event link found")
     return max(ids)

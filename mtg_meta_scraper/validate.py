@@ -1,4 +1,4 @@
-"""Confronto tra la nostra quota di meta e il Metagame Breakdown di MTGTop8."""
+"""Compare our meta share with MTGTop8's Metagame Breakdown."""
 
 from __future__ import annotations
 
@@ -55,7 +55,7 @@ def validate(fetcher: Fetcher, repo: Repo, formats: Collection[str], today: date
         page = fetcher.get_text(f"format?f={code}")
         meta_id = parse_meta_periods(page).get(META_PERIOD_LABEL) if page else None
         if meta_id is None:
-            log.warning("formato %s: periodo %r non disponibile, salto", code, META_PERIOD_LABEL)
+            log.warning("format %s: period %r unavailable, skipping", code, META_PERIOD_LABEL)
             continue
         site_page = fetcher.get_text(f"format?f={code}&meta={meta_id}")
         if not site_page:

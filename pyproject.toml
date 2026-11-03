@@ -1,7 +1,7 @@
 [project]
 name = "mtg-meta-scraper"
 version = "0.1.0"
-description = "Scraper MTGTop8 -> TimescaleDB -> Grafana per l'analisi del metagame"
+description = "MTGTop8 -> TimescaleDB -> Grafana scraper for metagame analysis"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [

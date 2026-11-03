@@ -1,4 +1,4 @@
-"""Client HTTP "educato": rate limit, retry con backoff, decodifica cp1252."""
+""""Polite" HTTP client: rate limiting, retries with backoff, cp1252 decoding."""
 
 from __future__ import annotations
 
@@ -43,7 +43,7 @@ class PoliteClient:
         self._last_start = self._clock()
 
     def get_text(self, path: str) -> str | None:
-        """Scarica `path`; None su 404. Solleva dopo i retry esauriti."""
+        """Fetch `path`; None on 404. Raises once retries are exhausted."""
         for attempt in range(len(BACKOFFS) + 1):
             self._wait_turn()
             try:
@@ -59,7 +59,7 @@ class PoliteClient:
                 if not retryable or attempt == len(BACKOFFS):
                     raise
                 delay = max(BACKOFFS[attempt], _retry_after(exc))
-                log.warning("GET %s fallita (%s), nuovo tentativo tra %ss", path, exc, delay)
+                log.warning("GET %s failed (%s), retrying in %ss", path, exc, delay)
                 self._sleep(delay)
         raise AssertionError("unreachable")
 
@@ -68,7 +68,7 @@ class PoliteClient:
 
 
 def _retry_after(exc: Exception) -> float:
-    """Secondi indicati da Retry-After su una risposta 429/503 (0 se assente o non numerico)."""
+    """Seconds from Retry-After on a 429/503 response (0 if missing or not numeric)."""
     if isinstance(exc, httpx.HTTPStatusError):
         try:
             return min(float(exc.response.headers.get("Retry-After", 0)), 600)

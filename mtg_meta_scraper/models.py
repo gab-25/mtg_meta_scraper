@@ -1,4 +1,4 @@
-"""Strutture dati condivise da parser, repository e pipeline."""
+"""Data structures shared by parsers, repository and pipeline."""
 
 from __future__ import annotations
 

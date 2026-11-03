@@ -83,10 +83,10 @@ def test_commander_grouping_for_edh(repo, seed):
 
 
 def test_rising_deltas(repo, seed):
-    seed.event(1, "MO", date(2026, 10, 10))  # periodo precedente
+    seed.event(1, "MO", date(2026, 10, 10))  # previous period
     seed.many(1, "MO", "A", 2, rank=5)
     seed.many(1, "MO", "B", 8, rank=5)
-    seed.event(2, "MO", date(2026, 10, 30))  # periodo corrente
+    seed.event(2, "MO", date(2026, 10, 30))  # current period
     seed.many(2, "MO", "A", 6, rank=1)
     seed.many(2, "MO", "B", 4, rank=5)
     rows = fetch(repo, "SELECT * FROM rising('MO', '14 days', 1, :as_of)", as_of=AS_OF)
@@ -96,7 +96,7 @@ def test_rising_deltas(repo, seed):
     assert float(share) == 60 and float(share_delta) == 40
     assert float(avg_points) == 8 and float(points_delta) == 6
     assert float(win_pct) == 100
-    assert rows[0][0] == "A"  # ordinato per share_delta
+    assert rows[0][0] == "A"  # sorted by share_delta
 
 
 def test_rising_respects_min_decks(repo, seed):
@@ -128,5 +128,5 @@ def test_rising_new_group_has_null_points_delta(repo, seed):
     seed.many(2, "MO", "A", 4, rank=3)
     by = {r[0]: r for r in fetch(repo, "SELECT * FROM rising('MO', '14 days', 1, :as_of)", as_of=AS_OF)}
     assert by["A"][4] == 4  # avg_points
-    assert by["A"][5] is None  # points_delta: nessun dato precedente
-    assert float(by["A"][3]) == 100  # share_delta: prima era 0%
+    assert by["A"][5] is None  # points_delta: no previous data
+    assert float(by["A"][3]) == 100  # share_delta: it was 0% before

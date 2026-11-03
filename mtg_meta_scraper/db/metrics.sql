@@ -1,6 +1,6 @@
--- Metriche del metagame. Eseguito da Repo.init_schema() dopo le migrazioni Alembic (idempotente).
+-- Metagame metrics. Run by Repo.init_schema() after the Alembic migrations (idempotent).
 
--- Pesi della performance: modificare QUI per cambiarli ovunque.
+-- Performance weights: change them HERE to change them everywhere.
 CREATE OR REPLACE FUNCTION placement_points(rank_min int) RETURNS numeric
 LANGUAGE sql IMMUTABLE AS $$
     SELECT (CASE
@@ -13,8 +13,8 @@ LANGUAGE sql IMMUTABLE AS $$
     END)::numeric
 $$;
 
--- Un mazzo per riga, con il raggruppamento da usare nelle metriche:
--- categoria MTGTop8, oppure comandante per Duel Commander / cEDH.
+-- One deck per row, with the grouping used by the metrics:
+-- MTGTop8 category, or commander for Duel Commander / cEDH.
 CREATE OR REPLACE VIEW deck_facts AS
 SELECT d.id AS deck_id,
        d.event_id,
@@ -33,7 +33,7 @@ LEFT JOIN archetype a ON a.id = d.archetype_id
 WHERE (CASE WHEN e.format_code IN ('EDH', 'cEDH') AND d.commander IS NOT NULL
             THEN d.commander ELSE a.name END) IS NOT NULL;
 
--- Quota di meta (%) per bucket temporale; League incluse. Solo i top_n gruppi per n. mazzi.
+-- Meta share (%) per time bucket; Leagues included. Only the top_n groups by deck count.
 CREATE OR REPLACE FUNCTION meta_share_series(
     fmt text, bucket interval, t_from timestamptz, t_to timestamptz, top_n int
 ) RETURNS TABLE ("time" timestamptz, group_name text, share numeric)
@@ -52,7 +52,7 @@ LANGUAGE sql STABLE AS $$
     ORDER BY 1, 2
 $$;
 
--- Performance media (punti per piazzamento) per bucket; League escluse. Stessi top_n della quota.
+-- Average performance (points per placement) per bucket; Leagues excluded. Same top_n as the share.
 CREATE OR REPLACE FUNCTION performance_series(
     fmt text, bucket interval, t_from timestamptz, t_to timestamptz, top_n int
 ) RETURNS TABLE ("time" timestamptz, group_name text, avg_points numeric)
@@ -71,7 +71,7 @@ LANGUAGE sql STABLE AS $$
     ORDER BY 1, 2
 $$;
 
--- Mazzi in salita: periodo corrente (as_of - period, as_of] vs precedente di pari durata.
+-- Rising decks: current period (as_of - period, as_of] vs the previous one of equal length.
 CREATE OR REPLACE FUNCTION rising(
     fmt text, period interval, min_decks int, as_of timestamptz
 ) RETURNS TABLE (group_name text, decks int, share numeric, share_delta numeric,
@@ -99,7 +99,7 @@ LANGUAGE sql STABLE AS $$
     SELECT c.g, c.decks::int, c.share,
            c.share - COALESCE(pv.share, 0),
            c.avg_points,
-           c.avg_points - pv.avg_points,  -- NULL se manca il periodo precedente
+           c.avg_points - pv.avg_points,  -- NULL if the previous period is missing
            c.win_pct
     FROM agg c
     LEFT JOIN agg pv ON pv.g = c.g AND pv.p = 'prev'
@@ -107,7 +107,7 @@ LANGUAGE sql STABLE AS $$
     ORDER BY 4 DESC, 1
 $$;
 
--- Dettaglio: nomi di mazzo che compongono un gruppo.
+-- Detail: deck names that make up a group.
 CREATE OR REPLACE FUNCTION group_breakdown(
     fmt text, grp text, t_from timestamptz, t_to timestamptz
 ) RETURNS TABLE (deck_name text, decks int)

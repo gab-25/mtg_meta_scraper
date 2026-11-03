@@ -5,7 +5,7 @@ from mtg_meta_scraper.db.tables import Base
 
 
 def test_models_match_migrations(repo):
-    """Se fallisce: hai cambiato tables.py senza migrazione. `uv run alembic revision --autogenerate -m ...`"""
+    """If this fails: you changed tables.py without a migration. `uv run alembic revision --autogenerate -m ...`"""
     with repo.session.begin():
         ctx = MigrationContext.configure(repo.session.connection(), opts={"compare_server_default": True})
         diff = compare_metadata(ctx, Base.metadata)

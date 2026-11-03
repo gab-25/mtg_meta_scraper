@@ -17,7 +17,7 @@
     "list": [
       {
         "name": "format",
-        "label": "Formato",
+        "label": "Format",
         "type": "query",
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -60,7 +60,7 @@
       },
       {
         "name": "top_n",
-        "label": "Top N archetipi",
+        "label": "Top N archetypes",
         "type": "textbox",
         "query": "10",
         "current": {
@@ -77,7 +77,7 @@
       },
       {
         "name": "period",
-        "label": "Periodo 'in salita'",
+        "label": "'Rising' period",
         "type": "custom",
         "query": "14 days,30 days",
         "current": {
@@ -99,7 +99,7 @@
       },
       {
         "name": "min_decks",
-        "label": "Mazzi minimi",
+        "label": "Minimum decks",
         "type": "textbox",
         "query": "5",
         "current": {
@@ -116,7 +116,7 @@
       },
       {
         "name": "grp",
-        "label": "Archetipo (dettaglio)",
+        "label": "Archetype (detail)",
         "type": "query",
         "datasource": {
           "type": "grafana-postgresql-datasource",
@@ -124,7 +124,7 @@
         },
         "refresh": 2,
         "query": "SELECT DISTINCT group_name FROM deck_facts WHERE format_code = ${format:sqlstring} AND event_date >= $__timeFrom()::date ORDER BY 1",
-        "definition": "archetipi del formato nell'intervallo"
+        "definition": "format archetypes in the time range"
       }
     ]
   },
@@ -132,12 +132,12 @@
     {
       "id": 1,
       "type": "timeseries",
-      "title": "Quota di meta (%)",
+      "title": "Meta share (%)",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "mtg-meta-scraper-db"
       },
-      "description": "Percentuale dei mazzi del formato appartenenti a ogni archetipo (comandante per Duel Commander/cEDH), per bucket temporale. MTGO League incluse.",
+      "description": "Percentage of the format's decks belonging to each archetype (commander for Duel Commander/cEDH), per time bucket. MTGO Leagues included.",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -186,12 +186,12 @@
     {
       "id": 2,
       "type": "timeseries",
-      "title": "Performance (punti medi per piazzamento)",
+      "title": "Performance (average points per placement)",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "mtg-meta-scraper-db"
       },
-      "description": "Media dei punti per piazzamento: 1° = 8, 2° = 6, 3-4 = 4, 5-8 = 2, 9-16 = 1, oltre = 0.5. MTGO League escluse (non hanno un piazzamento reale). Proxy del winrate, che MTGTop8 non pubblica.",
+      "description": "Average points per placement: 1st = 8, 2nd = 6, 3-4 = 4, 5-8 = 2, 9-16 = 1, below = 0.5. MTGO Leagues excluded (they have no real placement). A proxy for winrate, which MTGTop8 does not publish.",
       "gridPos": {
         "h": 10,
         "w": 24,
@@ -241,12 +241,12 @@
     {
       "id": 3,
       "type": "table",
-      "title": "Mazzi in salita (ultimo periodo vs precedente)",
+      "title": "Rising decks (last period vs previous)",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "mtg-meta-scraper-db"
       },
-      "description": "Confronto tra l'ultimo periodo ($period) e quello precedente di pari durata. Solo archetipi con almeno $min_decks mazzi nel periodo corrente. Ordinati per variazione della quota.",
+      "description": "Compares the last period ($period) with the previous one of equal length. Only archetypes with at least $min_decks decks in the current period. Sorted by share change.",
       "gridPos": {
         "h": 12,
         "w": 14,
@@ -270,7 +270,7 @@
               },
               {
                 "id": "displayName",
-                "value": "Quota %"
+                "value": "Share %"
               }
             ]
           },
@@ -282,7 +282,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Δ quota"
+                "value": "Δ share"
               },
               {
                 "id": "custom.cellOptions",
@@ -382,7 +382,7 @@
               },
               {
                 "id": "displayName",
-                "value": "% vittorie torneo"
+                "value": "% tournament wins"
               }
             ]
           },
@@ -394,7 +394,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Mazzi"
+                "value": "Decks"
               },
               {
                 "id": "decimals",
@@ -410,7 +410,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Archetipo"
+                "value": "Archetype"
               }
             ]
           }
@@ -436,12 +436,12 @@
     {
       "id": 4,
       "type": "table",
-      "title": "Dettaglio: nomi di mazzo in \"$grp\"",
+      "title": "Detail: deck names in \"$grp\"",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "mtg-meta-scraper-db"
       },
-      "description": "Nomi dati dai giocatori ai mazzi raggruppati nell'archetipo selezionato (variabile 'Archetipo'), nell'intervallo di tempo della dashboard.",
+      "description": "Names players gave to the decks grouped under the selected archetype ('Archetype' variable), within the dashboard time range.",
       "gridPos": {
         "h": 12,
         "w": 10,
@@ -459,7 +459,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Nome mazzo"
+                "value": "Deck name"
               }
             ]
           },
@@ -471,7 +471,7 @@
             "properties": [
               {
                 "id": "displayName",
-                "value": "Mazzi"
+                "value": "Decks"
               }
             ]
           }

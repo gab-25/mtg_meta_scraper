@@ -1,4 +1,4 @@
-"""Riga di comando: `python -m mtg_meta_scraper init-db | backfill | update | validate | run`."""
+"""Command line: `python -m mtg_meta_scraper init-db | backfill | update | validate | run`."""
 
 from __future__ import annotations
 
@@ -35,11 +35,11 @@ def _run_validate(settings: Settings) -> list[ValidationRow]:
 
 
 def _print_validation(rows: list[ValidationRow]) -> None:
-    print(f"{'formato':<8} {'archetipo':<32} {'sito %':>7} {'nostro %':>9} {'diff':>6}  esito")
+    print(f"{'format':<8} {'archetype':<32} {'site %':>7} {'ours %':>9} {'diff':>6}  result")
     for r in rows:
         ours = "-" if r.ours_pct is None else f"{r.ours_pct:.1f}"
         diff = "-" if r.diff is None else f"{r.diff:.1f}"
-        print(f"{r.format_code:<8} {r.name[:32]:<32} {r.site_pct:>7.1f} {ours:>9} {diff:>6}  {'ok' if r.ok else 'SCARTO'}")
+        print(f"{r.format_code:<8} {r.name[:32]:<32} {r.site_pct:>7.1f} {ours:>9} {diff:>6}  {'ok' if r.ok else 'MISMATCH'}")
 
 
 def _next_run(now: datetime, hour: int) -> datetime:
@@ -57,22 +57,22 @@ def _run_scheduler(settings: Settings) -> None:
         backfill(client, repo, settings, _today())
         while not stop.is_set():
             nxt = _next_run(datetime.now(UTC), settings.update_hour_utc)
-            log.info("prossimo aggiornamento: %s", nxt.isoformat())
+            log.info("next update: %s", nxt.isoformat())
             if stop.wait((nxt - datetime.now(UTC)).total_seconds()):
                 break
             try:
                 update(client, repo, settings, _today())
-            except Exception:  # noqa: BLE001 - lo scheduler non deve morire
-                log.exception("aggiornamento fallito")
+            except Exception:  # noqa: BLE001 - the scheduler must not die
+                log.exception("update failed")
                 repo.rollback()
     finally:
         client.close()
         repo.close()
-        log.info("scheduler terminato")
+        log.info("scheduler stopped")
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="python -m mtg_meta_scraper", description="Scraper metagame MTGTop8")
+    parser = argparse.ArgumentParser(prog="python -m mtg_meta_scraper", description="MTGTop8 metagame scraper")
     parser.add_argument("command", choices=["init-db", "backfill", "update", "validate", "run"])
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

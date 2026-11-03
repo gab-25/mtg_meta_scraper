@@ -1,4 +1,4 @@
-"""Ambiente Alembic: URL da `sqlalchemy.url` (impostato da engine.alembic_config) o da DATABASE_URL."""
+"""Alembic environment: URL from `sqlalchemy.url` (set by engine.alembic_config) or from DATABASE_URL."""
 
 from alembic import context
 from sqlalchemy import create_engine

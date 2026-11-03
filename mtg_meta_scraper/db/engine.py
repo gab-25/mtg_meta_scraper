@@ -1,4 +1,4 @@
-"""Engine SQLAlchemy e migrazioni Alembic."""
+"""SQLAlchemy engine and Alembic migrations."""
 
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ MIGRATIONS_DIR = Path(__file__).parent / "migrations"
 
 
 def sqlalchemy_url(url: str) -> str:
-    """`postgresql://...` (formato di DATABASE_URL) -> driver psycopg 3."""
+    """`postgresql://...` (DATABASE_URL format) -> psycopg 3 driver."""
     u = make_url(url)
     if u.drivername == "postgresql":
         u = u.set(drivername="postgresql+psycopg")
@@ -26,11 +26,11 @@ def make_engine(url: str) -> Engine:
 def alembic_config(url: str) -> Config:
     cfg = Config()
     cfg.set_main_option("script_location", str(MIGRATIONS_DIR))
-    # ConfigParser interpreta i '%': vanno raddoppiati (es. password con caratteri speciali).
+    # ConfigParser interprets '%': it must be doubled (e.g. passwords with special characters).
     cfg.set_main_option("sqlalchemy.url", sqlalchemy_url(url).replace("%", "%%"))
     return cfg
 
 
 def migrate(url: str) -> None:
-    """Porta lo schema all'ultima migrazione."""
+    """Upgrade the schema to the latest migration."""
     command.upgrade(alembic_config(url), "head")

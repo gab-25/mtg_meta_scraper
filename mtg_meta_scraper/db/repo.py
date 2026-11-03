@@ -1,4 +1,4 @@
-"""Accesso al database: migrazioni, upsert idempotenti, stato di scansione."""
+"""Database access: migrations, idempotent upserts, scan state."""
 
 from __future__ import annotations
 
@@ -18,7 +18,7 @@ METRICS_SQL = Path(__file__).parent / "metrics.sql"
 
 
 class Repo:
-    """Ogni metodo apre e chiude la propria transazione."""
+    """Each method opens and closes its own transaction."""
 
     def __init__(self, session: Session, url: str) -> None:
         self.session = session
@@ -37,16 +37,16 @@ class Repo:
         self.session.rollback()
 
     def init_schema(self) -> None:
-        """Migrazioni Alembic, poi le funzioni di metrics.sql (ricreate a ogni avvio)."""
+        """Alembic migrations, then the metrics.sql functions (recreated on every start)."""
         migrate(self.url)
         with self.session.begin():
-            # Cursore DBAPI senza parametri: i '%' del file non vanno interpretati come segnaposto.
+            # Parameterless DBAPI cursor: '%' in the file must not be treated as placeholders.
             with self.session.connection().connection.cursor() as cur:
                 cur.execute(METRICS_SQL.read_text())
 
     def upsert_event(self, ev: ParsedEvent) -> None:
         if ev.format_code is None:
-            raise ValueError(f"evento {ev.event_id}: formato non target {ev.format_label!r}")
+            raise ValueError(f"event {ev.event_id}: non-target format {ev.format_label!r}")
         event_values = dict(
             id=ev.event_id, format_code=ev.format_code, name=ev.name, event_date=ev.event_date,
             players=ev.players, source=ev.source, stars=ev.stars, is_major=ev.is_major,
@@ -60,7 +60,7 @@ class Repo:
             ))
             if not ev.decks:
                 return
-            # archetype_id, commander e detail_scraped non vengono toccati: li imposta save_deck_detail.
+            # archetype_id, commander and detail_scraped are left untouched: save_deck_detail sets them.
             stmt = insert(Deck).values([
                 dict(id=d.deck_id, event_id=ev.event_id, rank_raw=d.rank_raw, rank_min=d.rank_min,
                      rank_max=d.rank_max, deck_name=d.deck_name, player=d.player)
@@ -81,13 +81,13 @@ class Repo:
                     index_elements=[Archetype.id], set_={"name": stmt.excluded.name},
                 ))
             changes: dict = {"commander": d.commander_key, "detail_scraped": True}
-            if d.archetype_id is not None:  # una pagina senza categoria non cancella quella nota
+            if d.archetype_id is not None:  # a page without a category does not erase the known one
                 changes["archetype_id"] = d.archetype_id
             self.session.execute(
                 update(Deck).where(Deck.id == d.deck_id, Deck.event_id == event_id).values(changes)
             )
             self.session.execute(delete(DeckCard).where(DeckCard.deck_id == d.deck_id))
-            # Righe duplicate (stessa carta nella stessa sezione) vengono sommate.
+            # Duplicate rows (same card in the same section) are summed.
             merged: dict[tuple[str, str], int] = {}
             for c in d.cards:
                 merged[(c.section, c.card_name)] = merged.get((c.section, c.card_name), 0) + c.qty
@@ -128,7 +128,7 @@ class Repo:
             ))
 
     def scan_state(self, event_id: int) -> tuple[str, int, date | None] | None:
-        """(status, attempts, event_date) oppure None."""
+        """(status, attempts, event_date) or None."""
         with self.session.begin():
             row = self.session.execute(
                 select(ScanState.status, ScanState.attempts, ScanState.event_date)
@@ -141,7 +141,7 @@ class Repo:
         return st[0] if st else None
 
     def max_known_event_id(self) -> int | None:
-        # missing/error non contano: verranno ritentati dal prossimo update.
+        # missing/error do not count: the next update will retry them.
         with self.session.begin():
             return self.session.scalar(
                 select(func.max(ScanState.event_id)).where(ScanState.status.in_(("done", "skipped")))
@@ -157,7 +157,7 @@ class Repo:
         return [tuple(r) for r in rows]
 
     def decks_missing_detail(self, event_id: int) -> list[int]:
-        """Mazzi senza dettaglio o ancora senza categoria (MTGTop8 li categorizza in ritardo)."""
+        """Decks without detail or still uncategorized (MTGTop8 categorizes them late)."""
         with self.session.begin():
             return list(self.session.scalars(
                 select(Deck.id)
@@ -166,7 +166,7 @@ class Repo:
             ))
 
     def archetype_shares(self, format_code: str, after: date) -> dict[str, float]:
-        """Quota (%) di ogni archetipo MTGTop8 per gli eventi successivi a `after`."""
+        """Share (%) of each MTGTop8 archetype for events after `after`."""
         with self.session.begin():
             rows = self.session.execute(
                 text("""
