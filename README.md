@@ -53,7 +53,7 @@ Postgres (`5432`) e Grafana (`3000`) sono esposti solo su `127.0.0.1`.
 | `MTG_META_SCRAPER_UPDATE_HOUR_UTC` | `6` | Ora dell'aggiornamento giornaliero |
 | `GF_ADMIN_PASSWORD` | `admin` | Password admin di Grafana |
 
-I **pesi della performance** si trovano in un solo posto, la funzione `placement_points` in `src/mtg_meta_scraper/db/metrics.sql`. Le funzioni vengono ricreate a ogni avvio dello scraper.
+I **pesi della performance** si trovano in un solo posto, la funzione `placement_points` in `mtg_meta_scraper/db/metrics.sql`. Le funzioni vengono ricreate a ogni avvio dello scraper.
 
 ## Sviluppo
 
@@ -67,9 +67,9 @@ I test dei parser usano pagine reali di MTGTop8 salvate in `tests/fixtures/`. I 
 
 Struttura:
 
-- `src/mtg_meta_scraper/http.py`: client HTTP lento e con tentativi ripetuti.
-- `src/mtg_meta_scraper/parsing/`: lettura delle pagine evento, formato e home.
-- `src/mtg_meta_scraper/db/`: schema, metriche SQL e repository.
-- `src/mtg_meta_scraper/pipeline.py`: recupero storico e aggiornamento.
-- `src/mtg_meta_scraper/validate.py`: confronto con il sito.
+- `mtg_meta_scraper/http.py`: client HTTP lento e con tentativi ripetuti.
+- `mtg_meta_scraper/parsing/`: lettura delle pagine evento, formato e home.
+- `mtg_meta_scraper/db/`: schema, metriche SQL e repository.
+- `mtg_meta_scraper/pipeline.py`: recupero storico e aggiornamento.
+- `mtg_meta_scraper/validate.py`: confronto con il sito.
 - `grafana/`: datasource e dashboard caricati in automatico.
