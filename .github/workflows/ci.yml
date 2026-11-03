@@ -6,10 +6,16 @@ on:
   release:
     types: [published]
 
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+
 jobs:
   test:
-    if: github.event_name == 'push'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+
     services:
       db:
         image: timescale/timescaledb:2.17.2-pg16
@@ -20,29 +26,64 @@ jobs:
         ports:
           - 5432:5432
         options: >-
-          --health-cmd "pg_isready -U mtg_meta_scraper -d mtg_meta_scraper"
+          --health-cmd "pg_isready -U mtg_meta_scraper"
           --health-interval 5s
           --health-timeout 5s
-          --health-retries 20
-    env:
-      REQUIRE_TEST_DB: "1"
-      TEST_DATABASE_URL: postgresql://mtg_meta_scraper:mtg_meta_scraper@localhost:5432/mtg_meta_scraper_test
+          --health-retries 10
+
     steps:
       - uses: actions/checkout@v5
+
       - uses: astral-sh/setup-uv@v7
         with:
+          version: "0.11.25"
           enable-cache: true
-      - name: Install dependencies
-        run: uv sync --frozen --python 3.12
-      - name: Run tests
-        run: uv run pytest -v
 
-  docker:
+      - name: Install dependencies
+        run: uv sync --frozen
+
+      - name: Run tests
+        env:
+          TEST_DATABASE_URL: postgresql://mtg_meta_scraper:mtg_meta_scraper@localhost:5432/mtg_meta_scraper_test
+          REQUIRE_TEST_DB: "1"
+        run: uv run pytest
+
+  publish:
+    needs: test
     if: github.event_name == 'release'
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
     steps:
       - uses: actions/checkout@v5
-      - name: Build image
-        run: docker build -t mtg-meta-scraper:${{ github.event.release.tag_name }} .
-      - name: Smoke test
-        run: docker run --rm mtg-meta-scraper:${{ github.event.release.tag_name }} python -m mtg_meta_scraper --help
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=latest
+            type=semver,pattern={{version}},value=${{ github.event.release.tag_name }}
+            type=sha
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
