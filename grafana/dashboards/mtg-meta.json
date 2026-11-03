@@ -9,7 +9,7 @@
   "version": 1,
   "editable": true,
   "time": {
-    "from": "now-6M",
+    "from": "now-30d",
     "to": "now"
   },
   "refresh": "",
