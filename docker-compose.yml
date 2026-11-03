@@ -1,0 +1,55 @@
+name: mtg-meta-scraper
+
+services:
+  db:
+    image: timescale/timescaledb:2.17.2-pg16
+    environment:
+      POSTGRES_USER: mtg_meta_scraper
+      POSTGRES_PASSWORD: mtg_meta_scraper
+      POSTGRES_DB: mtg_meta_scraper
+    ports:
+      - "127.0.0.1:5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U mtg_meta_scraper -d mtg_meta_scraper"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  scraper:
+    build: .
+    environment:
+      DATABASE_URL: postgresql://mtg_meta_scraper:mtg_meta_scraper@db:5432/mtg_meta_scraper
+      MTG_META_SCRAPER_REQUEST_INTERVAL: ${MTG_META_SCRAPER_REQUEST_INTERVAL:-1.5}
+      MTG_META_SCRAPER_BACKFILL_DAYS: ${MTG_META_SCRAPER_BACKFILL_DAYS:-30}
+      MTG_META_SCRAPER_FORMATS: ${MTG_META_SCRAPER_FORMATS:-ST,PI,MO,LE,VI,PAU,EDH,cEDH}
+      MTG_META_SCRAPER_RECHECK_DAYS: ${MTG_META_SCRAPER_RECHECK_DAYS:-3}
+      MTG_META_SCRAPER_UPDATE_HOUR_UTC: ${MTG_META_SCRAPER_UPDATE_HOUR_UTC:-6}
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:11.3.0
+    ports:
+      - "127.0.0.1:3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GF_ADMIN_PASSWORD:-admin}
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/mtg-meta.json
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  pgdata:
+  grafana-data:

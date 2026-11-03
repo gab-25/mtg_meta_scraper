@@ -1,0 +1,498 @@
+{
+  "uid": "mtg-meta",
+  "title": "MTG Meta",
+  "tags": [
+    "mtg"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "refresh": "",
+  "templating": {
+    "list": [
+      {
+        "name": "format",
+        "label": "Format",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "mtg-meta-scraper-db"
+        },
+        "refresh": 1,
+        "query": "SELECT code AS __value, name AS __text FROM format ORDER BY name",
+        "definition": "SELECT code AS __value, name AS __text FROM format ORDER BY name",
+        "current": {
+          "text": "Modern",
+          "value": "MO"
+        }
+      },
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "custom",
+        "query": "7 days,14 days,30 days",
+        "current": {
+          "text": "7 days",
+          "value": "7 days"
+        },
+        "options": [
+          {
+            "text": "7 days",
+            "value": "7 days",
+            "selected": true
+          },
+          {
+            "text": "14 days",
+            "value": "14 days",
+            "selected": false
+          },
+          {
+            "text": "30 days",
+            "value": "30 days",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "top_n",
+        "label": "Top N archetypes",
+        "type": "textbox",
+        "query": "10",
+        "current": {
+          "text": "10",
+          "value": "10"
+        },
+        "options": [
+          {
+            "text": "10",
+            "value": "10",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "period",
+        "label": "'Rising' period",
+        "type": "custom",
+        "query": "14 days,30 days",
+        "current": {
+          "text": "14 days",
+          "value": "14 days"
+        },
+        "options": [
+          {
+            "text": "14 days",
+            "value": "14 days",
+            "selected": true
+          },
+          {
+            "text": "30 days",
+            "value": "30 days",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "min_decks",
+        "label": "Minimum decks",
+        "type": "textbox",
+        "query": "5",
+        "current": {
+          "text": "5",
+          "value": "5"
+        },
+        "options": [
+          {
+            "text": "5",
+            "value": "5",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "grp",
+        "label": "Archetype (detail)",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "mtg-meta-scraper-db"
+        },
+        "refresh": 2,
+        "query": "SELECT DISTINCT group_name FROM deck_facts WHERE format_code = ${format:sqlstring} AND event_date >= $__timeFrom()::date ORDER BY 1",
+        "definition": "format archetypes in the time range"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Meta share (%)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Percentage of the format's decks belonging to each archetype (commander for Duel Commander/cEDH), per time bucket. MTGO Leagues included.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT \"time\", group_name AS metric, share AS value\nFROM meta_share_series(${format:sqlstring}, '$bucket'::interval, $__timeFrom(), $__timeTo(), $top_n)\nORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Performance (average points per placement)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Average points per placement: 1st = 8, 2nd = 6, 3-4 = 4, 5-8 = 2, 9-16 = 1, below = 0.5. MTGO Leagues excluded (they have no real placement). A proxy for winrate, which MTGTop8 does not publish.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2,
+          "custom": {
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT \"time\", group_name AS metric, avg_points AS value\nFROM performance_series(${format:sqlstring}, '$bucket'::interval, $__timeFrom(), $__timeTo(), $top_n)\nORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Rising decks (last period vs previous)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Compares the last period ($period) with the previous one of equal length. Only archetypes with at least $min_decks decks in the current period. Sorted by share change.",
+      "gridPos": {
+        "h": 12,
+        "w": 14,
+        "x": 0,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "displayName",
+                "value": "Share %"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "share_delta"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Δ share"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "text",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.5
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_points"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Performance"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "points_delta"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Δ performance"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "text",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "win_pct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "displayName",
+                "value": "% tournament wins"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Decks"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "group_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Archetype"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM rising(${format:sqlstring}, '$period'::interval, $min_decks, now())"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Detail: deck names in \"$grp\"",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Names players gave to the decks grouped under the selected archetype ('Archetype' variable), within the dashboard time range.",
+      "gridPos": {
+        "h": 12,
+        "w": 10,
+        "x": 14,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deck_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Deck name"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Decks"
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM group_breakdown(${format:sqlstring}, ${grp:sqlstring}, $__timeFrom(), $__timeTo())"
+        }
+      ]
+    }
+  ],
+  "annotations": {
+    "list": []
+  }
+}

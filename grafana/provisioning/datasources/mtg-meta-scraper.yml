@@ -1,0 +1,16 @@
+apiVersion: 1
+datasources:
+  - name: MTG Meta DB
+    uid: mtg-meta-scraper-db
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: db:5432
+    user: mtg_meta_scraper
+    isDefault: true
+    jsonData:
+      database: mtg_meta_scraper
+      sslmode: disable
+      timescaledb: true
+      postgresVersion: 1600
+    secureJsonData:
+      password: mtg_meta_scraper

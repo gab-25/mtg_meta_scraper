@@ -1,0 +1,37 @@
+"""Alembic environment: URL from `sqlalchemy.url` (set by engine.alembic_config) or from DATABASE_URL."""
+
+from alembic import context
+from sqlalchemy import create_engine
+
+from mtg_meta_scraper.config import Settings
+from mtg_meta_scraper.db.engine import sqlalchemy_url
+from mtg_meta_scraper.db import sql_objects  # noqa: F401 - registers the view/functions with autogenerate
+from mtg_meta_scraper.db.tables import Base
+
+config = context.config
+target_metadata = Base.metadata
+
+
+def _url() -> str:
+    return config.get_main_option("sqlalchemy.url") or sqlalchemy_url(Settings.from_env().database_url)
+
+
+def run_migrations_offline() -> None:
+    context.configure(url=_url(), target_metadata=target_metadata, literal_binds=True)
+    with context.begin_transaction():
+        context.run_migrations()
+
+
+def run_migrations_online() -> None:
+    engine = create_engine(_url())
+    with engine.connect() as connection:
+        context.configure(connection=connection, target_metadata=target_metadata, compare_server_default=True)
+        with context.begin_transaction():
+            context.run_migrations()
+    engine.dispose()
+
+
+if context.is_offline_mode():
+    run_migrations_offline()
+else:
+    run_migrations_online()
