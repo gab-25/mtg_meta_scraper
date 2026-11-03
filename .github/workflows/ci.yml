@@ -3,6 +3,8 @@ name: CI
 on:
   push:
     branches: [main]
+  release:
+    types: [published]
 
 concurrency:
   group: ci-${{ github.ref }}
@@ -10,6 +12,7 @@ concurrency:
 
 jobs:
   test:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     services:
       db:
@@ -37,3 +40,13 @@ jobs:
         run: uv sync --frozen --python 3.12
       - name: Run tests
         run: uv run pytest -v
+
+  docker:
+    if: github.event_name == 'release'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build image
+        run: docker build -t mtg-meta-scraper:${{ github.event.release.tag_name }} .
+      - name: Smoke test
+        run: docker run --rm mtg-meta-scraper:${{ github.event.release.tag_name }} python -m mtg_meta_scraper --help
