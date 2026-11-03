@@ -10,9 +10,6 @@ dependencies = [
     "psycopg[binary]>=3.2",
 ]
 
-[project.scripts]
-mtg-meta-scraper = "mtg_meta_scraper.cli:main"
-
 [dependency-groups]
 dev = ["pytest>=8"]
 

@@ -35,3 +35,13 @@ def test_cli_validate_exit_code(monkeypatch):
     with pytest.raises(SystemExit) as exc:
         cli.main(["validate"])
     assert exc.value.code == 1
+
+
+def test_runs_as_module():
+    import subprocess
+    import sys
+
+    out = subprocess.run(
+        [sys.executable, "-m", "mtg_meta_scraper", "--help"], capture_output=True, text=True, check=True
+    )
+    assert "python -m mtg_meta_scraper" in out.stdout

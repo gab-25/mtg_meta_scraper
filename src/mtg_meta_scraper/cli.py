@@ -1,4 +1,4 @@
-"""Riga di comando: `mtg-meta-scraper init-db | backfill | update | validate | run`."""
+"""Riga di comando: `python -m mtg_meta_scraper init-db | backfill | update | validate | run`."""
 
 from __future__ import annotations
 
@@ -72,7 +72,7 @@ def _run_scheduler(settings: Settings) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="mtg-meta-scraper", description="Scraper metagame MTGTop8")
+    parser = argparse.ArgumentParser(prog="python -m mtg_meta_scraper", description="Scraper metagame MTGTop8")
     parser.add_argument("command", choices=["init-db", "backfill", "update", "validate", "run"])
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

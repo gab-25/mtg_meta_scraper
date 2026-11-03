@@ -31,10 +31,10 @@ Log: `docker compose logs -f scraper`.
 ## Comandi
 
 ```bash
-docker compose exec scraper mtg-meta-scraper validate   # confronta le nostre quote con quelle del sito
+docker compose exec scraper python -m mtg_meta_scraper validate   # confronta le nostre quote con quelle del sito
 ```
 
-Il container `scraper` esegue già da solo recupero storico e aggiornamento giornaliero: **non** lanciare `mtg-meta-scraper backfill` o `mtg-meta-scraper update` mentre è in esecuzione, altrimenti le richieste al sito raddoppiano. Per lanciarli a mano: `docker compose stop scraper`, poi `docker compose run --rm scraper mtg-meta-scraper update` (o `backfill`), poi `docker compose start scraper`.
+Il container `scraper` esegue già da solo recupero storico e aggiornamento giornaliero: **non** lanciare `python -m mtg_meta_scraper backfill` o `python -m mtg_meta_scraper update` mentre è in esecuzione, altrimenti le richieste al sito raddoppiano. Per lanciarli a mano: `docker compose stop scraper`, poi `docker compose run --rm scraper python -m mtg_meta_scraper update` (o `backfill`), poi `docker compose start scraper`.
 
 Se lo scraper trova 100 pagine di fila mancanti o in errore (sito giù, blocco, HTML cambiato) si ferma da solo per non martellare il sito e riprova al giro successivo.
 
