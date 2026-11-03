@@ -1,0 +1,16 @@
+apiVersion: 1
+datasources:
+  - name: MTG Meta DB
+    uid: mtgmeta-db
+    type: grafana-postgresql-datasource
+    access: proxy
+    url: db:5432
+    user: mtgmeta
+    isDefault: true
+    jsonData:
+      database: mtgmeta
+      sslmode: disable
+      timescaledb: true
+      postgresVersion: 1600
+    secureJsonData:
+      password: mtgmeta

@@ -1,0 +1,498 @@
+{
+  "uid": "mtg-meta",
+  "title": "MTG Meta",
+  "tags": [
+    "mtg"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": {
+    "from": "now-6M",
+    "to": "now"
+  },
+  "refresh": "",
+  "templating": {
+    "list": [
+      {
+        "name": "format",
+        "label": "Formato",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "mtgmeta-db"
+        },
+        "refresh": 1,
+        "query": "SELECT code AS __value, name AS __text FROM format ORDER BY name",
+        "definition": "SELECT code AS __value, name AS __text FROM format ORDER BY name",
+        "current": {
+          "text": "Modern",
+          "value": "MO"
+        }
+      },
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "custom",
+        "query": "7 days,14 days,30 days",
+        "current": {
+          "text": "7 days",
+          "value": "7 days"
+        },
+        "options": [
+          {
+            "text": "7 days",
+            "value": "7 days",
+            "selected": true
+          },
+          {
+            "text": "14 days",
+            "value": "14 days",
+            "selected": false
+          },
+          {
+            "text": "30 days",
+            "value": "30 days",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "top_n",
+        "label": "Top N archetipi",
+        "type": "textbox",
+        "query": "10",
+        "current": {
+          "text": "10",
+          "value": "10"
+        },
+        "options": [
+          {
+            "text": "10",
+            "value": "10",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "period",
+        "label": "Periodo 'in salita'",
+        "type": "custom",
+        "query": "14 days,30 days",
+        "current": {
+          "text": "14 days",
+          "value": "14 days"
+        },
+        "options": [
+          {
+            "text": "14 days",
+            "value": "14 days",
+            "selected": true
+          },
+          {
+            "text": "30 days",
+            "value": "30 days",
+            "selected": false
+          }
+        ]
+      },
+      {
+        "name": "min_decks",
+        "label": "Mazzi minimi",
+        "type": "textbox",
+        "query": "5",
+        "current": {
+          "text": "5",
+          "value": "5"
+        },
+        "options": [
+          {
+            "text": "5",
+            "value": "5",
+            "selected": true
+          }
+        ]
+      },
+      {
+        "name": "grp",
+        "label": "Archetipo (dettaglio)",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "mtgmeta-db"
+        },
+        "refresh": 2,
+        "query": "SELECT DISTINCT group_name FROM deck_facts WHERE format_code = ${format:sqlstring} AND event_date >= $__timeFrom()::date ORDER BY 1",
+        "definition": "archetipi del formato nell'intervallo"
+      }
+    ]
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "timeseries",
+      "title": "Quota di meta (%)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtgmeta-db"
+      },
+      "description": "Percentuale dei mazzi del formato appartenenti a ogni archetipo (comandante per Duel Commander/cEDH), per bucket temporale. MTGO League incluse.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "custom": {
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtgmeta-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT \"time\", group_name AS metric, share AS value\nFROM meta_share_series(${format:sqlstring}, '$bucket'::interval, $__timeFrom(), $__timeTo(), $top_n)\nORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Performance (punti medi per piazzamento)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtgmeta-db"
+      },
+      "description": "Media dei punti per piazzamento: 1° = 8, 2° = 6, 3-4 = 4, 5-8 = 2, 9-16 = 1, oltre = 0.5. MTGO League escluse (non hanno un piazzamento reale). Proxy del winrate, che MTGTop8 non pubblica.",
+      "gridPos": {
+        "h": 10,
+        "w": 24,
+        "x": 0,
+        "y": 10
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2,
+          "custom": {
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "always"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "displayMode": "table",
+          "placement": "right",
+          "calcs": [
+            "lastNotNull",
+            "mean"
+          ]
+        },
+        "tooltip": {
+          "mode": "multi",
+          "sort": "desc"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtgmeta-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT \"time\", group_name AS metric, avg_points AS value\nFROM performance_series(${format:sqlstring}, '$bucket'::interval, $__timeFrom(), $__timeTo(), $top_n)\nORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "table",
+      "title": "Mazzi in salita (ultimo periodo vs precedente)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtgmeta-db"
+      },
+      "description": "Confronto tra l'ultimo periodo ($period) e quello precedente di pari durata. Solo archetipi con almeno $min_decks mazzi nel periodo corrente. Ordinati per variazione della quota.",
+      "gridPos": {
+        "h": 12,
+        "w": 14,
+        "x": 0,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {
+          "decimals": 1
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "share"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "displayName",
+                "value": "Quota %"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "share_delta"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Δ quota"
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "text",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.5
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_points"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Performance"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "points_delta"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Δ performance"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "color-text"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "red",
+                      "value": null
+                    },
+                    {
+                      "color": "text",
+                      "value": 0
+                    },
+                    {
+                      "color": "green",
+                      "value": 0.1
+                    }
+                  ]
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "win_pct"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "displayName",
+                "value": "% vittorie torneo"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mazzi"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "group_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Archetipo"
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtgmeta-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM rising(${format:sqlstring}, '$period'::interval, $min_decks, now())"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Dettaglio: nomi di mazzo in \"$grp\"",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtgmeta-db"
+      },
+      "description": "Nomi dati dai giocatori ai mazzi raggruppati nell'archetipo selezionato (variabile 'Archetipo'), nell'intervallo di tempo della dashboard.",
+      "gridPos": {
+        "h": 12,
+        "w": 10,
+        "x": 14,
+        "y": 20
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deck_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Nome mazzo"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Mazzi"
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtgmeta-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM group_breakdown(${format:sqlstring}, ${grp:sqlstring}, $__timeFrom(), $__timeTo())"
+        }
+      ]
+    }
+  ],
+  "annotations": {
+    "list": []
+  }
+}
