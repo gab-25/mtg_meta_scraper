@@ -2,8 +2,8 @@ name: CI
 
 on:
   push:
-  pull_request:
     branches: [main]
+  pull_request:
   workflow_dispatch:
 
 concurrency:
@@ -31,8 +31,8 @@ jobs:
       REQUIRE_TEST_DB: "1"
       TEST_DATABASE_URL: postgresql://mtg_meta_scraper:mtg_meta_scraper@localhost:5432/mtg_meta_scraper_test
     steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
+      - uses: actions/checkout@v5
+      - uses: astral-sh/setup-uv@v7
         with:
           enable-cache: true
       - name: Install dependencies
@@ -43,7 +43,7 @@ jobs:
   docker:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Build image
         run: docker build -t mtg-meta-scraper:ci .
       - name: Smoke test
