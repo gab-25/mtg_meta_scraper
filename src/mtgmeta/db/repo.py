@@ -131,7 +131,10 @@ class Repo:
         return st[0] if st else None
 
     def max_known_event_id(self) -> int | None:
-        row = self.conn.execute("SELECT max(event_id) FROM scan_state").fetchone()
+        # missing/error non contano: verranno ritentati dal prossimo update.
+        row = self.conn.execute(
+            "SELECT max(event_id) FROM scan_state WHERE status IN ('done', 'skipped')"
+        ).fetchone()
         self.conn.commit()
         return row[0]
 
@@ -144,8 +147,10 @@ class Repo:
         return rows
 
     def decks_missing_detail(self, event_id: int) -> list[int]:
+        """Mazzi senza dettaglio o ancora senza categoria (MTGTop8 li categorizza in ritardo)."""
         rows = self.conn.execute(
-            "SELECT id FROM deck WHERE event_id = %s AND NOT detail_scraped ORDER BY rank_min, id",
+            "SELECT id FROM deck WHERE event_id = %s AND (NOT detail_scraped OR archetype_id IS NULL)"
+            " ORDER BY rank_min, id",
             (event_id,),
         ).fetchall()
         self.conn.commit()

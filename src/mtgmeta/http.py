@@ -58,9 +58,20 @@ class PoliteClient:
                 )
                 if not retryable or attempt == len(BACKOFFS):
                     raise
-                log.warning("GET %s fallita (%s), nuovo tentativo tra %ss", path, exc, BACKOFFS[attempt])
-                self._sleep(BACKOFFS[attempt])
+                delay = max(BACKOFFS[attempt], _retry_after(exc))
+                log.warning("GET %s fallita (%s), nuovo tentativo tra %ss", path, exc, delay)
+                self._sleep(delay)
         raise AssertionError("unreachable")
 
     def close(self) -> None:
         self._client.close()
+
+
+def _retry_after(exc: Exception) -> float:
+    """Secondi indicati da Retry-After su una risposta 429/503 (0 se assente o non numerico)."""
+    if isinstance(exc, httpx.HTTPStatusError):
+        try:
+            return min(float(exc.response.headers.get("Retry-After", 0)), 600)
+        except ValueError:
+            return 0
+    return 0

@@ -99,7 +99,7 @@ LANGUAGE sql STABLE AS $$
     SELECT c.g, c.decks::int, c.share,
            c.share - COALESCE(pv.share, 0),
            c.avg_points,
-           c.avg_points - COALESCE(pv.avg_points, 0),
+           c.avg_points - pv.avg_points,  -- NULL se manca il periodo precedente
            c.win_pct
     FROM agg c
     LEFT JOIN agg pv ON pv.g = c.g AND pv.p = 'prev'

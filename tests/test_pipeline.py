@@ -19,6 +19,7 @@ class FakeFetcher:
         self.default = default
         self.requests: list[str] = []
         self.formats: dict[str, str] = {}
+        self.deck_html = lambda: load_fixture("event_mo_93105_d907299.html")
 
     def get_text(self, path: str) -> str | None:
         self.requests.append(path)
@@ -29,7 +30,7 @@ class FakeFetcher:
         if path.startswith("event?e="):
             eid = int(path.split("=")[1].split("&")[0])
             if "&d=" in path:
-                return self.load("event_mo_93105_d907299.html")
+                return self.deck_html()
             html = self.events.get(eid, self.default)
             return html() if callable(html) else html
         return None
@@ -123,3 +124,68 @@ def test_update_rechecks_recent_events(repo, load_fixture):
     assert "event?e=12" in f.requests
     assert "format?f=MO&meta=51" in f.requests
     assert repo.conn.execute("SELECT macro FROM archetype WHERE name = 'UR Aggro'").fetchone()[0] == "Aggro"
+
+
+def test_recheck_refetches_decks_without_archetype(repo, fake, load_fixture):
+    uncategorised = load_fixture("event_mo_93105_d907299.html").replace("archetype?a=", "nothing?a=")
+    fake.deck_html = lambda: uncategorised
+    scrape_event(fake, repo, 93105, ("MO",))
+    assert repo.conn.execute("SELECT archetype_id FROM deck WHERE id = 907299").fetchone()[0] is None
+    fake.deck_html = lambda: load_fixture("event_mo_93105_d907299.html")
+    fake.requests.clear()
+    scrape_event(fake, repo, 93105, ("MO",))
+    assert "event?e=93105&d=907299&f=MO" in fake.requests
+    assert repo.conn.execute("SELECT archetype_id FROM deck WHERE id = 907299").fetchone()[0] == 209
+
+
+def test_deck_page_unavailable_is_retried_on_next_scrape(repo, fake):
+    fake.deck_html = lambda: None
+    scrape_event(fake, repo, 93105, ("MO",))
+    fake.deck_html = lambda: fake.load("event_mo_93105_d907299.html")
+    fake.requests.clear()
+    scrape_event(fake, repo, 93105, ("MO",))
+    assert len(fake.requests) == 16
+
+
+def test_update_retries_ids_marked_missing(repo, load_fixture):
+    f = FakeFetcher(load_fixture, latest=11, events={11: load_fixture("event_mo_league_93120.html")})
+    repo.mark_scan(10, "done")
+    repo.mark_scan(11, "missing")
+    update(f, repo, settings(), TODAY)
+    assert repo.scan_status(11) == "done"
+
+
+def test_update_retries_ids_marked_error(repo, load_fixture):
+    f = FakeFetcher(load_fixture, latest=11, events={11: load_fixture("event_mo_league_93120.html")})
+    repo.mark_scan(10, "done")
+    repo.mark_scan(11, "error")
+    update(f, repo, settings(), TODAY)
+    assert repo.scan_status(11) == "done"
+
+
+def test_backfill_stops_after_consecutive_failures(repo, load_fixture):
+    def boom():
+        raise httpx.ConnectError("down")
+
+    f = FakeFetcher(load_fixture, latest=1000, default=boom)
+    stats = backfill(f, repo, settings(), TODAY)
+    assert stats.aborted is True
+    assert stats.scanned == 100
+
+
+def test_backfill_stops_after_consecutive_missing_pages(repo, load_fixture):
+    f = FakeFetcher(load_fixture, latest=1000, default=None)
+    stats = backfill(f, repo, settings(), TODAY)
+    assert stats.aborted is True
+    assert stats.scanned == 100
+
+
+def test_update_stops_after_consecutive_failures(repo, load_fixture):
+    def boom():
+        raise httpx.ConnectError("down")
+
+    f = FakeFetcher(load_fixture, latest=1000, default=boom)
+    repo.mark_scan(1, "done")
+    stats = update(f, repo, settings(), TODAY)
+    assert stats.aborted is True
+    assert stats.scanned == 100

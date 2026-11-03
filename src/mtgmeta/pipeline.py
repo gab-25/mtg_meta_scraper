@@ -18,6 +18,8 @@ log = logging.getLogger("mtgmeta")
 
 MAX_ATTEMPTS = 3
 OLD_EVENTS_STOP = 300
+# Interruttore di sicurezza: tante pagine mancanti o in errore di fila = sito giù, blocco o HTML cambiato.
+MAX_CONSECUTIVE_FAILURES = 100
 META_PERIOD_LABEL = "Last 2 Months"
 
 
@@ -32,6 +34,8 @@ class BackfillStats:
     skipped: int = 0
     missing: int = 0
     errors: int = 0
+    aborted: bool = False
+    failure_streak: int = 0
 
     def add(self, status: str) -> None:
         self.scanned += 1
@@ -43,6 +47,17 @@ class BackfillStats:
             self.missing += 1
         else:
             self.errors += 1
+        self.failure_streak = self.failure_streak + 1 if status in ("missing", "error") else 0
+
+    def should_abort(self) -> bool:
+        if self.failure_streak >= MAX_CONSECUTIVE_FAILURES:
+            log.error(
+                "%s pagine mancanti/in errore di fila: interrompo per non martellare il sito "
+                "(sito giù, blocco o HTML cambiato?)",
+                self.failure_streak,
+            )
+            self.aborted = True
+        return self.aborted
 
 
 def scrape_event(
@@ -112,7 +127,7 @@ def backfill(fetcher: Fetcher, repo: Repo, settings: Settings, today: date) -> B
         stats.add(status)
         log.info("backfill evento %s: %s (%s)", event_id, status, ev.event_date if ev else "-")
         old_streak = _update_streak(old_streak, ev.event_date if ev else None, cutoff)
-        if old_streak >= OLD_EVENTS_STOP:
+        if old_streak >= OLD_EVENTS_STOP or stats.should_abort():
             break
     log.info("backfill concluso: %s", stats)
     return stats
@@ -134,6 +149,8 @@ def update(fetcher: Fetcher, repo: Repo, settings: Settings, today: date) -> Bac
     for event_id in range(start, latest + 1):
         status, _ = _scrape_event(fetcher, repo, event_id, settings.formats, cutoff)
         stats.add(status)
+        if stats.should_abort():
+            return stats
 
     recheck_from = today - timedelta(days=settings.recheck_days)
     for event_id, _code in repo.events_since(recheck_from, settings.formats):

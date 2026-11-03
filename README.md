@@ -31,10 +31,14 @@ Log: `docker compose logs -f scraper`.
 ## Comandi
 
 ```bash
-docker compose exec scraper mtgmeta update     # aggiornamento manuale
-docker compose exec scraper mtgmeta backfill   # riprende/completa il recupero storico
 docker compose exec scraper mtgmeta validate   # confronta le nostre quote con quelle del sito
 ```
+
+Il container `scraper` esegue già da solo recupero storico e aggiornamento giornaliero: **non** lanciare `mtgmeta backfill` o `mtgmeta update` mentre è in esecuzione, altrimenti le richieste al sito raddoppiano. Per lanciarli a mano: `docker compose stop scraper`, poi `docker compose run --rm scraper mtgmeta update` (o `backfill`), poi `docker compose start scraper`.
+
+Se lo scraper trova 100 pagine di fila mancanti o in errore (sito giù, blocco, HTML cambiato) si ferma da solo per non martellare il sito e riprova al giro successivo.
+
+Postgres (`5432`) e Grafana (`3000`) sono esposti solo su `127.0.0.1`.
 
 `validate` confronta, per ogni formato, i primi 10 archetipi del "Metagame Breakdown – Last 2 Months" del sito con le nostre percentuali sugli ultimi 60 giorni. Segnala `SCARTO` oltre ±2 punti ed esce con codice 1. Finché il recupero storico non è completo gli scarti sono attesi.
 

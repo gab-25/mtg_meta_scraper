@@ -127,3 +127,14 @@ def test_group_breakdown_counts_deck_names(repo, seed):
     seed.many(1, "MO", "Rakdos Aggro", 1, name="Rakdos Scam")
     rows = q(repo, "SELECT * FROM group_breakdown('MO', 'Rakdos Aggro', %s, %s)", FROM, TO)
     assert rows == [("Rakdos Delirium", 3), ("Rakdos Scam", 1)]
+
+
+def test_rising_new_group_has_null_points_delta(repo, seed):
+    seed.event(1, "MO", date(2026, 10, 10))
+    seed.many(1, "MO", "B", 4)
+    seed.event(2, "MO", date(2026, 10, 30))
+    seed.many(2, "MO", "A", 4, rank=3)
+    by = {r[0]: r for r in q(repo, "SELECT * FROM rising('MO', '14 days', 1, %s)", AS_OF)}
+    assert by["A"][4] == 4  # avg_points
+    assert by["A"][5] is None  # points_delta: nessun dato precedente
+    assert float(by["A"][3]) == 100  # share_delta: prima era 0%

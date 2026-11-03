@@ -82,3 +82,13 @@ def test_settings_from_env_parses_formats(monkeypatch):
     assert s.formats == ("MO", "cEDH")
     assert s.request_interval == 1.5
     assert s.backfill_days == 183
+
+
+def test_honours_retry_after_on_429():
+    ft = FakeTime()
+    codes = iter([429, 200])
+    c = make_client(
+        lambda r: httpx.Response(next(codes), headers={"Retry-After": "30"}, content=b"ok"), ft, interval=0
+    )
+    assert c.get_text("a") == "ok"
+    assert 30 in ft.sleeps
