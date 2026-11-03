@@ -1,8 +1,8 @@
 from datetime import date
 
-from mtgmeta.models import CardLine, DeckRow
-from mtgmeta.parsing.common import parse_rank, parse_site_date
-from mtgmeta.parsing.event import parse_deck_detail, parse_event
+from mtg_meta_scraper.models import CardLine, DeckRow
+from mtg_meta_scraper.parsing.common import parse_rank, parse_site_date
+from mtg_meta_scraper.parsing.event import parse_deck_detail, parse_event
 
 
 def _sum(detail, section):

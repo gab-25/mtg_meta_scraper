@@ -7,8 +7,8 @@ import re
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 from selectolax.lexbor import LexborNode as Node
 
-from mtgmeta.models import CardLine, DeckDetail, DeckRow, ParsedEvent, Section
-from mtgmeta.parsing.common import FORMAT_LABELS, parse_rank, parse_site_date, query_int
+from mtg_meta_scraper.models import CardLine, DeckDetail, DeckRow, ParsedEvent, Section
+from mtg_meta_scraper.parsing.common import FORMAT_LABELS, parse_rank, parse_site_date, query_int
 
 _DATE_LINE = re.compile(r"(?:(\d+)\s+players\s*-\s*)?(\d{2}/\d{2}/\d{2})")
 _MAIN_HEADER = re.compile(r"^\d+\s+[A-Z]")

@@ -1,8 +1,8 @@
 import pytest
 
-from mtgmeta import cli
-from mtgmeta.models import MetaShare
-from mtgmeta.validate import ValidationRow, compare_shares
+from mtg_meta_scraper import cli
+from mtg_meta_scraper.models import MetaShare
+from mtg_meta_scraper.validate import ValidationRow, compare_shares
 
 
 def _site(*pairs):

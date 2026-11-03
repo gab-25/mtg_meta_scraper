@@ -1,6 +1,6 @@
 apiVersion: 1
 providers:
-  - name: mtgmeta
+  - name: mtg-meta-scraper
     folder: MTG
     type: file
     disableDeletion: false

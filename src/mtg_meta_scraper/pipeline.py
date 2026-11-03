@@ -8,13 +8,13 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Protocol
 
-from mtgmeta.config import Settings
-from mtgmeta.db.repo import Repo
-from mtgmeta.models import ParsedEvent
-from mtgmeta.parsing.event import parse_deck_detail, parse_event
-from mtgmeta.parsing.format_page import parse_latest_event_id, parse_meta_periods, parse_metagame
+from mtg_meta_scraper.config import Settings
+from mtg_meta_scraper.db.repo import Repo
+from mtg_meta_scraper.models import ParsedEvent
+from mtg_meta_scraper.parsing.event import parse_deck_detail, parse_event
+from mtg_meta_scraper.parsing.format_page import parse_latest_event_id, parse_meta_periods, parse_metagame
 
-log = logging.getLogger("mtgmeta")
+log = logging.getLogger("mtg_meta_scraper")
 
 MAX_ATTEMPTS = 3
 OLD_EVENTS_STOP = 300

@@ -7,12 +7,12 @@ from collections.abc import Collection
 from dataclasses import dataclass
 from datetime import date, timedelta
 
-from mtgmeta.db.repo import Repo
-from mtgmeta.models import MetaShare
-from mtgmeta.parsing.format_page import parse_meta_periods, parse_metagame
-from mtgmeta.pipeline import META_PERIOD_LABEL, Fetcher
+from mtg_meta_scraper.db.repo import Repo
+from mtg_meta_scraper.models import MetaShare
+from mtg_meta_scraper.parsing.format_page import parse_meta_periods, parse_metagame
+from mtg_meta_scraper.pipeline import META_PERIOD_LABEL, Fetcher
 
-log = logging.getLogger("mtgmeta")
+log = logging.getLogger("mtg_meta_scraper")
 
 PERIOD_DAYS = 60
 TOP = 10

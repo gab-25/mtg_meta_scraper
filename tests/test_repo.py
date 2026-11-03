@@ -1,4 +1,4 @@
-from mtgmeta.parsing.event import parse_event
+from mtg_meta_scraper.parsing.event import parse_event
 
 
 def _count(repo, sql, *args):

@@ -1,8 +1,8 @@
 import httpx
 import pytest
 
-from mtgmeta.config import Settings
-from mtgmeta.http import USER_AGENT, PoliteClient
+from mtg_meta_scraper.config import Settings
+from mtg_meta_scraper.http import USER_AGENT, PoliteClient
 
 
 class FakeTime:

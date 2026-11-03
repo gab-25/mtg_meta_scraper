@@ -6,8 +6,8 @@ import re
 
 from selectolax.lexbor import LexborHTMLParser as HTMLParser
 
-from mtgmeta.models import MetaShare
-from mtgmeta.parsing.common import query_int
+from mtg_meta_scraper.models import MetaShare
+from mtg_meta_scraper.parsing.common import query_int
 
 _MACRO = re.compile(r"^(AGGRO|CONTROL|COMBO)\b")
 _PCT = re.compile(r"^([\d.]+)\s*%$")

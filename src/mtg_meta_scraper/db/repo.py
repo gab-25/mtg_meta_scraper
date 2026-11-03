@@ -8,7 +8,7 @@ from pathlib import Path
 
 import psycopg
 
-from mtgmeta.models import DeckDetail, MetaShare, ParsedEvent
+from mtg_meta_scraper.models import DeckDetail, MetaShare, ParsedEvent
 
 _SQL_DIR = Path(__file__).parent
 

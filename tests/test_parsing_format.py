@@ -1,4 +1,4 @@
-from mtgmeta.parsing.format_page import parse_latest_event_id, parse_meta_periods, parse_metagame
+from mtg_meta_scraper.parsing.format_page import parse_latest_event_id, parse_meta_periods, parse_metagame
 
 
 def test_parse_metagame_modern(load_fixture):

@@ -1,4 +1,4 @@
-"""Riga di comando: `mtgmeta init-db | backfill | update | validate | run`."""
+"""Riga di comando: `mtg-meta-scraper init-db | backfill | update | validate | run`."""
 
 from __future__ import annotations
 
@@ -8,13 +8,13 @@ import signal
 import threading
 from datetime import UTC, date, datetime, timedelta
 
-from mtgmeta.config import Settings
-from mtgmeta.db.repo import Repo
-from mtgmeta.http import PoliteClient
-from mtgmeta.pipeline import backfill, update
-from mtgmeta.validate import ValidationRow, validate
+from mtg_meta_scraper.config import Settings
+from mtg_meta_scraper.db.repo import Repo
+from mtg_meta_scraper.http import PoliteClient
+from mtg_meta_scraper.pipeline import backfill, update
+from mtg_meta_scraper.validate import ValidationRow, validate
 
-log = logging.getLogger("mtgmeta")
+log = logging.getLogger("mtg_meta_scraper")
 
 
 def _today() -> date:
@@ -72,7 +72,7 @@ def _run_scheduler(settings: Settings) -> None:
 
 
 def main(argv: list[str] | None = None) -> None:
-    parser = argparse.ArgumentParser(prog="mtgmeta", description="Scraper metagame MTGTop8")
+    parser = argparse.ArgumentParser(prog="mtg-meta-scraper", description="Scraper metagame MTGTop8")
     parser.add_argument("command", choices=["init-db", "backfill", "update", "validate", "run"])
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")

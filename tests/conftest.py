@@ -41,7 +41,7 @@ def _test_db_url():
 
 @pytest.fixture(scope="session")
 def _session_repo(_test_db_url):
-    from mtgmeta.db.repo import Repo
+    from mtg_meta_scraper.db.repo import Repo
 
     repo = Repo.connect(_test_db_url)
     repo.init_schema()

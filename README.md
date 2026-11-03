@@ -31,10 +31,10 @@ Log: `docker compose logs -f scraper`.
 ## Comandi
 
 ```bash
-docker compose exec scraper mtgmeta validate   # confronta le nostre quote con quelle del sito
+docker compose exec scraper mtg-meta-scraper validate   # confronta le nostre quote con quelle del sito
 ```
 
-Il container `scraper` esegue già da solo recupero storico e aggiornamento giornaliero: **non** lanciare `mtgmeta backfill` o `mtgmeta update` mentre è in esecuzione, altrimenti le richieste al sito raddoppiano. Per lanciarli a mano: `docker compose stop scraper`, poi `docker compose run --rm scraper mtgmeta update` (o `backfill`), poi `docker compose start scraper`.
+Il container `scraper` esegue già da solo recupero storico e aggiornamento giornaliero: **non** lanciare `mtg-meta-scraper backfill` o `mtg-meta-scraper update` mentre è in esecuzione, altrimenti le richieste al sito raddoppiano. Per lanciarli a mano: `docker compose stop scraper`, poi `docker compose run --rm scraper mtg-meta-scraper update` (o `backfill`), poi `docker compose start scraper`.
 
 Se lo scraper trova 100 pagine di fila mancanti o in errore (sito giù, blocco, HTML cambiato) si ferma da solo per non martellare il sito e riprova al giro successivo.
 
@@ -53,7 +53,7 @@ Postgres (`5432`) e Grafana (`3000`) sono esposti solo su `127.0.0.1`.
 | `MTGMETA_UPDATE_HOUR_UTC` | `6` | Ora dell'aggiornamento giornaliero |
 | `GF_ADMIN_PASSWORD` | `admin` | Password admin di Grafana |
 
-I **pesi della performance** si trovano in un solo posto, la funzione `placement_points` in `src/mtgmeta/db/metrics.sql`. Le funzioni vengono ricreate a ogni avvio dello scraper.
+I **pesi della performance** si trovano in un solo posto, la funzione `placement_points` in `src/mtg_meta_scraper/db/metrics.sql`. Le funzioni vengono ricreate a ogni avvio dello scraper.
 
 ## Sviluppo
 
@@ -67,9 +67,9 @@ I test dei parser usano pagine reali di MTGTop8 salvate in `tests/fixtures/`. I 
 
 Struttura:
 
-- `src/mtgmeta/http.py`: client HTTP lento e con tentativi ripetuti.
-- `src/mtgmeta/parsing/`: lettura delle pagine evento, formato e home.
-- `src/mtgmeta/db/`: schema, metriche SQL e repository.
-- `src/mtgmeta/pipeline.py`: recupero storico e aggiornamento.
-- `src/mtgmeta/validate.py`: confronto con il sito.
+- `src/mtg_meta_scraper/http.py`: client HTTP lento e con tentativi ripetuti.
+- `src/mtg_meta_scraper/parsing/`: lettura delle pagine evento, formato e home.
+- `src/mtg_meta_scraper/db/`: schema, metriche SQL e repository.
+- `src/mtg_meta_scraper/pipeline.py`: recupero storico e aggiornamento.
+- `src/mtg_meta_scraper/validate.py`: confronto con il sito.
 - `grafana/`: datasource e dashboard caricati in automatico.

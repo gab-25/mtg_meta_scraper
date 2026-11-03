@@ -3,8 +3,8 @@ from datetime import date
 import httpx
 import pytest
 
-from mtgmeta.config import Settings
-from mtgmeta.pipeline import backfill, scrape_event, update
+from mtg_meta_scraper.config import Settings
+from mtg_meta_scraper.pipeline import backfill, scrape_event, update
 
 TODAY = date(2026, 11, 3)
 

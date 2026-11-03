@@ -11,7 +11,7 @@ import httpx
 USER_AGENT = "mtg-meta-scraper/0.1 (+personal metagame analysis)"
 BACKOFFS = (2, 4, 8)
 
-log = logging.getLogger("mtgmeta")
+log = logging.getLogger("mtg_meta_scraper")
 
 
 class PoliteClient:
