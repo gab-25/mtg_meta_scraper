@@ -1,0 +1,13 @@
+from pathlib import Path
+
+import pytest
+
+FIXTURES = Path(__file__).parent / "fixtures"
+
+
+@pytest.fixture
+def load_fixture():
+    def _load(name: str) -> str:
+        return (FIXTURES / name).read_bytes().decode("cp1252", errors="replace")
+
+    return _load
