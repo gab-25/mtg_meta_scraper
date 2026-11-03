@@ -1,5 +1,5 @@
 [project]
-name = "mtgmeta"
+name = "mtg-meta-scraper"
 version = "0.1.0"
 description = "Scraper MTGTop8 -> TimescaleDB -> Grafana per l'analisi del metagame"
 readme = "README.md"

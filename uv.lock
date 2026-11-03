@@ -89,7 +89,7 @@ wheels = [
 ]
 
 [[package]]
-name = "mtgmeta"
+name = "mtg-meta-scraper"
 version = "0.1.0"
 source = { editable = "." }
 dependencies = [
