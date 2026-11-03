@@ -222,3 +222,6 @@ __marimo__/
 # Superpowers docs (spec/plan) - local only
 docs/superpowers/
 .superpowers/
+
+# Worktree locali di Claude Code
+.claude/worktrees/
