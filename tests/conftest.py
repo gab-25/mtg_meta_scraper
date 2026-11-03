@@ -51,6 +51,7 @@ def _session_repo(_test_db_url):
 
 @pytest.fixture
 def repo(_session_repo):
+    _session_repo.conn.rollback()
     _session_repo.conn.execute("TRUNCATE event, archetype, deck, deck_card, scan_state CASCADE")
     _session_repo.conn.commit()
     return _session_repo
