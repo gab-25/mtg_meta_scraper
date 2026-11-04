@@ -18,15 +18,17 @@ Variables at the top: format, time bucket, top N archetypes, "rising" period, mi
 ## Getting started
 
 ```bash
-cp .env.example .env        # optional: change the Grafana password, formats, request rate
+cp .env.example .env        # set MTG_META_SCRAPER_DB_READER_PASSWORD; optionally the Grafana password, formats, request rate
 docker compose up -d --build
 ```
 
-- Grafana: <http://localhost:3000> (viewable without login; to edit, use admin / `GF_ADMIN_PASSWORD`).
+- Grafana: <http://localhost:3000>, login only (anonymous access and sign-up are off): admin / `GF_ADMIN_PASSWORD`. `GF_ADMIN_PASSWORD` only applies when the Grafana volume is first created.
 - On first start the scraper backfills the **last 30 days**. It makes roughly one request every 1.5 s and needs one per deck, so the backfill takes **a few hours** (about 3-4). It goes from the most recent events to the oldest, so the dashboard fills up with recent data right away. If interrupted, it resumes where it left off. For a longer history raise `MTG_META_SCRAPER_BACKFILL_DAYS` (e.g. `183` for 6 months: about a day). The daily update never deletes old data, so the history grows on its own.
 - After the initial backfill, the update runs every day at `MTG_META_SCRAPER_UPDATE_HOUR_UTC` (UTC). It collects new tournaments and rechecks those from the last `MTG_META_SCRAPER_RECHECK_DAYS` days.
 
 Logs: `docker compose logs -f scraper`.
+
+Grafana reads the database as `grafana_reader`, a role that can only read (`SELECT` on every table and view, including those added by later migrations). The scraper's migrations create it with `MTG_META_SCRAPER_DB_READER_PASSWORD` when it is missing, also on a database volume that already exists. Changing that password later is done by hand (`ALTER ROLE grafana_reader PASSWORD '...'`). If the scraper's database user may not create roles (a managed database, a restricted user), create it once by hand, `CREATE ROLE grafana_reader LOGIN PASSWORD '...';`, and the migrations just grant it read access.
 
 ## Commands
 
@@ -52,6 +54,8 @@ For each format, `validate` compares the top 10 archetypes of the site's "Metaga
 | `MTG_META_SCRAPER_RECHECK_DAYS` | `3` | Days of tournaments to recheck on each update |
 | `MTG_META_SCRAPER_UPDATE_HOUR_UTC` | `6` | Hour of the daily update |
 | `GF_ADMIN_PASSWORD` | `admin` | Grafana admin password |
+| `MTG_META_SCRAPER_DB_READER_PASSWORD` | (required) | Password of the read-only `grafana_reader` role (scraper and Grafana) |
+| `MTG_META_SCRAPER_DB_HOST`, `MTG_META_SCRAPER_DB_NAME`, `MTG_META_SCRAPER_DB_SSLMODE` | set in `docker-compose.yml` | Grafana datasource connection (host, database, SSL mode) |
 
 The **performance weights** live in a single place, the `placement_points` function in `mtg_meta_scraper/db/sql_objects.py`. Changing them requires a migration (see [Database and migrations](#database-and-migrations)).
 

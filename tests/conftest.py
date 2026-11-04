@@ -46,6 +46,8 @@ def _test_db_url():
 def _session_repo(_test_db_url):
     from mtg_meta_scraper.db.repo import Repo
 
+    # The migrations create the read-only grafana_reader role with it (roles are server-wide).
+    os.environ.setdefault("MTG_META_SCRAPER_DB_READER_PASSWORD", "grafana_reader")
     repo = Repo.connect(_test_db_url)
     repo.init_schema()
     yield repo
