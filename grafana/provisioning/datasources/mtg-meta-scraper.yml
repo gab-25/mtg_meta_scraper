@@ -4,13 +4,15 @@ datasources:
     uid: mtg-meta-scraper-db
     type: grafana-postgresql-datasource
     access: proxy
-    url: db:5432
-    user: mtg_meta_scraper
+    url: ${MTG_META_SCRAPER_DB_HOST}:5432
+    # Read-only role, created by the scraper's migrations.
+    user: grafana_reader
     isDefault: true
+    editable: false
     jsonData:
-      database: mtg_meta_scraper
-      sslmode: disable
+      database: ${MTG_META_SCRAPER_DB_NAME}
+      sslmode: ${MTG_META_SCRAPER_DB_SSLMODE}
       timescaledb: true
       postgresVersion: 1600
     secureJsonData:
-      password: mtg_meta_scraper
+      password: ${MTG_META_SCRAPER_DB_READER_PASSWORD}
