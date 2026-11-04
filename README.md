@@ -19,26 +19,36 @@ Variables at the top: format, time bucket, top N archetypes, "rising" period, mi
 
 ```bash
 cp .env.example .env        # set MTG_META_SCRAPER_DB_READER_PASSWORD; optionally the Grafana password, formats, request rate
-docker compose up -d --build
+docker compose up -d --build db grafana
+docker compose run -d --rm scraper python -m mtg_meta_scraper backfill   # once, in the background: the history
 ```
 
 - Grafana: <http://localhost:3000>, login only (anonymous access and sign-up are off): admin / `GF_ADMIN_PASSWORD`. `GF_ADMIN_PASSWORD` only applies when the Grafana volume is first created.
-- On first start the scraper backfills the **last 90 days**. It makes roughly one request every 1.5 s and needs one per deck, so the backfill takes **about half a day** (roughly 9-12 hours). It goes from the most recent events to the oldest, so the dashboard fills up with recent data right away. If interrupted, it resumes where it left off. For a longer history raise `MTG_META_SCRAPER_BACKFILL_DAYS` (e.g. `183` for 6 months: about a day). The daily update never deletes old data, so the history grows on its own.
-- After the initial backfill, the update runs every day at `MTG_META_SCRAPER_UPDATE_HOUR_UTC` (UTC). It collects new tournaments and rechecks those from the last `MTG_META_SCRAPER_RECHECK_DAYS` days.
+- The backfill loads the **last 90 days**; run it **once**, at the first deploy. It makes roughly one request every 1.5 s and needs one per deck, so the backfill takes **about half a day** (roughly 9-12 hours). It goes from the most recent events to the oldest, so the dashboard fills up with recent data right away. If interrupted, it resumes where it left off. For a longer history raise `MTG_META_SCRAPER_BACKFILL_DAYS` (e.g. `183` for 6 months: about a day). The update never deletes old data, so the history grows on its own.
+- The daily data comes from `python -m mtg_meta_scraper update` (the image's default command), see [Daily update](#daily-update).
 
-Logs: `docker compose logs -f scraper`.
+Logs: `docker compose logs -f` (or the job's pod logs on Kubernetes). After the backfill, `docker compose up -d` (or the scheduler) runs the update.
 
 Grafana reads the database as `grafana_reader`, a role that can only read (`SELECT` on every table and view, including those added by later migrations). The scraper's migrations create it with `MTG_META_SCRAPER_DB_READER_PASSWORD` when it is missing, also on a database volume that already exists. Changing that password later is done by hand (`ALTER ROLE grafana_reader PASSWORD '...'`). If the scraper's database user may not create roles (a managed database, a restricted user), create it once by hand, `CREATE ROLE grafana_reader LOGIN PASSWORD '...';`, and the migrations just grant it read access.
 
 ## Commands
 
 ```bash
-docker compose exec scraper python -m mtg_meta_scraper validate   # compare our shares with the site's
+docker compose run --rm scraper python -m mtg_meta_scraper validate   # compare our shares with the site's
 ```
 
-The `scraper` container already runs the backfill and the daily update on its own: do **not** run `python -m mtg_meta_scraper backfill` or `python -m mtg_meta_scraper update` while it is running, or requests to the site will double. To run them by hand: `docker compose stop scraper`, then `docker compose run --rm scraper python -m mtg_meta_scraper update` (or `backfill`), then `docker compose start scraper`.
+Never run two scraper commands at the same time (e.g. a backfill by hand while the scheduled update is running), or requests to the site will double.
 
-If the scraper hits 100 missing or failing pages in a row (site down, blocked, HTML changed) it stops by itself to avoid hammering the site, and retries on the next run.
+If the scraper hits 100 missing or failing pages in a row (site down, blocked, HTML changed) it stops by itself to avoid hammering the site. The update retries (see below); the backfill exits non-zero and, run again, resumes where it left off.
+
+## Daily update
+
+`python -m mtg_meta_scraper update` is a one-shot command meant to run **once a day** from an external scheduler (a Kubernetes `CronJob`, a host cron running `docker compose run --rm scraper`): the scraper has no internal scheduler. It collects the new tournaments, rechecks those from the last `MTG_META_SCRAPER_RECHECK_DAYS` days and refreshes the macro-categories.
+
+- A failed update (site unreachable, network or database error, or 100 failing pages in a row) is retried up to **4 attempts, 15 minutes apart** (about 45 minutes of waiting at most, plus the runs).
+- The command exits non-zero if the last attempt still failed, so the scheduler can report it.
+- A retry starts over: events already saved are not downloaded again, the recent ones are rechecked again.
+- On Kubernetes use `concurrencyPolicy: Forbid`, and don't schedule the update while the backfill Job is running.
 
 Postgres (`5432`) and Grafana (`3000`) are exposed on `127.0.0.1` only.
 
@@ -52,7 +62,6 @@ For each format, `validate` compares the top 10 archetypes of the site's "Metaga
 | `MTG_META_SCRAPER_BACKFILL_DAYS` | `90` | Backfill depth |
 | `MTG_META_SCRAPER_REQUEST_INTERVAL` | `1.5` | Seconds between two requests (don't lower it too much) |
 | `MTG_META_SCRAPER_RECHECK_DAYS` | `3` | Days of tournaments to recheck on each update |
-| `MTG_META_SCRAPER_UPDATE_HOUR_UTC` | `6` | Hour of the daily update |
 | `GF_ADMIN_PASSWORD` | `admin` | Grafana admin password |
 | `MTG_META_SCRAPER_DB_READER_PASSWORD` | (required) | Password of the read-only `grafana_reader` role (scraper and Grafana) |
 | `MTG_META_SCRAPER_DB_HOST`, `MTG_META_SCRAPER_DB_NAME`, `MTG_META_SCRAPER_DB_SSLMODE` | set in `docker-compose.yml` | Grafana datasource connection (host, database, SSL mode) |
