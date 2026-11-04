@@ -26,13 +26,14 @@ services:
       MTG_META_SCRAPER_BACKFILL_DAYS: ${MTG_META_SCRAPER_BACKFILL_DAYS:-90}
       MTG_META_SCRAPER_FORMATS: ${MTG_META_SCRAPER_FORMATS:-ST,PI,MO,LE,VI,PAU,EDH,cEDH}
       MTG_META_SCRAPER_RECHECK_DAYS: ${MTG_META_SCRAPER_RECHECK_DAYS:-3}
-      MTG_META_SCRAPER_UPDATE_HOUR_UTC: ${MTG_META_SCRAPER_UPDATE_HOUR_UTC:-6}
       # The migrations create the read-only grafana_reader role with it, when the role is missing.
       MTG_META_SCRAPER_DB_READER_PASSWORD: ${MTG_META_SCRAPER_DB_READER_PASSWORD:?set MTG_META_SCRAPER_DB_READER_PASSWORD in .env}
     depends_on:
       db:
         condition: service_healthy
-    restart: unless-stopped
+    # The daily update (one-shot): runs once on `docker compose up`; run it again with `docker compose run --rm scraper`.
+    # Scheduling is external (host cron, Kubernetes CronJob). Backfill: `docker compose run --rm scraper python -m mtg_meta_scraper backfill`.
+    restart: "no"
 
   grafana:
     image: grafana/grafana:11.3.0

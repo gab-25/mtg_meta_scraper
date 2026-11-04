@@ -6,4 +6,4 @@ COPY pyproject.toml uv.lock README.md ./
 RUN uv sync --frozen --no-dev --no-install-project
 COPY mtg_meta_scraper ./mtg_meta_scraper
 RUN uv sync --frozen --no-dev
-CMD ["python", "-m", "mtg_meta_scraper", "run"]
+CMD ["python", "-m", "mtg_meta_scraper", "update"]

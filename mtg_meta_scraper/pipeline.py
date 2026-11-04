@@ -1,9 +1,10 @@
-"""Scraping pipeline: single event, resumable backfill, daily update."""
+"""Scraping pipeline: single event, resumable backfill, daily update (with retries)."""
 
 from __future__ import annotations
 
 import logging
-from collections.abc import Collection
+import time
+from collections.abc import Callable, Collection
 from dataclasses import dataclass
 from datetime import date, timedelta
 from typing import Protocol
@@ -21,6 +22,9 @@ OLD_EVENTS_STOP = 300
 # Circuit breaker: many missing/failed pages in a row = site down, blocked, or HTML changed.
 MAX_CONSECUTIVE_FAILURES = 100
 META_PERIOD_LABEL = "Last 2 Months"
+# Daily update: a failed run (site down, blocked, network error) is retried, 15 minutes apart.
+UPDATE_ATTEMPTS = 4
+UPDATE_RETRY_SECONDS = 15 * 60
 
 
 class Fetcher(Protocol):
@@ -161,6 +165,26 @@ def update(fetcher: Fetcher, repo: Repo, settings: Settings, today: date) -> Bac
         _refresh_macro(fetcher, repo, code)
     log.info("update finished: %s", stats)
     return stats
+
+
+def update_with_retries(
+    fetcher: Fetcher, repo: Repo, settings: Settings, today: date, sleep: Callable[[float], None] = time.sleep
+) -> bool:
+    """Run the update, retrying a failure or an early stop. True when an attempt completed."""
+    for attempt in range(1, UPDATE_ATTEMPTS + 1):
+        try:
+            stats = update(fetcher, repo, settings, today)
+        except Exception as exc:  # noqa: BLE001 - any failure counts as an attempt
+            repo.rollback()
+            log.warning("update attempt %d/%d failed: %s: %s", attempt, UPDATE_ATTEMPTS, type(exc).__name__, exc)
+        else:
+            if not stats.aborted:
+                return True
+            log.warning("update attempt %d/%d stopped early", attempt, UPDATE_ATTEMPTS)
+        if attempt < UPDATE_ATTEMPTS:
+            sleep(UPDATE_RETRY_SECONDS)
+    log.error("update: giving up after %d attempts", UPDATE_ATTEMPTS)
+    return False
 
 
 def _refresh_macro(fetcher: Fetcher, repo: Repo, code: str) -> None:

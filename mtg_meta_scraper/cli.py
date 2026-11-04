@@ -1,17 +1,15 @@
-"""Command line: `python -m mtg_meta_scraper init-db | backfill | update | validate | run`."""
+"""Command line: `python -m mtg_meta_scraper update` (the daily run), `backfill` (once), `init-db`, `validate`."""
 
 from __future__ import annotations
 
 import argparse
 import logging
-import signal
-import threading
-from datetime import UTC, date, datetime, timedelta
+from datetime import UTC, date, datetime
 
 from mtg_meta_scraper.config import Settings
 from mtg_meta_scraper.db.repo import Repo
 from mtg_meta_scraper.http import PoliteClient
-from mtg_meta_scraper.pipeline import backfill, update
+from mtg_meta_scraper.pipeline import backfill, update_with_retries
 from mtg_meta_scraper.validate import ValidationRow, validate
 
 log = logging.getLogger("mtg_meta_scraper")
@@ -42,38 +40,9 @@ def _print_validation(rows: list[ValidationRow]) -> None:
         print(f"{r.format_code:<8} {r.name[:32]:<32} {r.site_pct:>7.1f} {ours:>9} {diff:>6}  {'ok' if r.ok else 'MISMATCH'}")
 
 
-def _next_run(now: datetime, hour: int) -> datetime:
-    target = now.replace(hour=hour, minute=0, second=0, microsecond=0)
-    return target if target > now else target + timedelta(days=1)
-
-
-def _run_scheduler(settings: Settings) -> None:
-    stop = threading.Event()
-    signal.signal(signal.SIGTERM, lambda *_: stop.set())
-    signal.signal(signal.SIGINT, lambda *_: stop.set())
-    client, repo = _open(settings)
-    try:
-        repo.init_schema()
-        backfill(client, repo, settings, _today())
-        while not stop.is_set():
-            nxt = _next_run(datetime.now(UTC), settings.update_hour_utc)
-            log.info("next update: %s", nxt.isoformat())
-            if stop.wait((nxt - datetime.now(UTC)).total_seconds()):
-                break
-            try:
-                update(client, repo, settings, _today())
-            except Exception:  # noqa: BLE001 - the scheduler must not die
-                log.exception("update failed")
-                repo.rollback()
-    finally:
-        client.close()
-        repo.close()
-        log.info("scheduler stopped")
-
-
 def main(argv: list[str] | None = None) -> None:
     parser = argparse.ArgumentParser(prog="python -m mtg_meta_scraper", description="MTGTop8 metagame scraper")
-    parser.add_argument("command", choices=["init-db", "backfill", "update", "validate", "run"])
+    parser.add_argument("command", choices=["init-db", "backfill", "update", "validate"])
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
     settings = Settings.from_env()
@@ -84,17 +53,14 @@ def main(argv: list[str] | None = None) -> None:
         if any(not r.ok for r in rows):
             raise SystemExit(1)
         return
-    if args.command == "run":
-        _run_scheduler(settings)
-        return
 
     client, repo = _open(settings)
     try:
         repo.init_schema()
-        if args.command == "backfill":
-            backfill(client, repo, settings, _today())
-        elif args.command == "update":
-            update(client, repo, settings, _today())
+        if args.command == "backfill" and backfill(client, repo, settings, _today()).aborted:
+            raise SystemExit(1)
+        if args.command == "update" and not update_with_retries(client, repo, settings, _today()):
+            raise SystemExit(1)
     finally:
         client.close()
         repo.close()

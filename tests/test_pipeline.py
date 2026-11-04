@@ -5,7 +5,7 @@ import pytest
 
 from conftest import scalar
 from mtg_meta_scraper.config import Settings
-from mtg_meta_scraper.pipeline import backfill, scrape_event, update
+from mtg_meta_scraper.pipeline import backfill, scrape_event, update, update_with_retries
 
 TODAY = date(2026, 11, 3)
 
@@ -189,3 +189,50 @@ def test_update_stops_after_consecutive_failures(repo, load_fixture):
     stats = update(f, repo, settings(), TODAY)
     assert stats.aborted is True
     assert stats.scanned == 100
+
+
+class RollbackRepo:
+    def __init__(self):
+        self.rollbacks = 0
+
+    def rollback(self):
+        self.rollbacks += 1
+
+
+def _scripted_update(monkeypatch, outcomes):
+    """Each outcome is an exception to raise or the `aborted` flag of the returned stats."""
+    from types import SimpleNamespace
+
+    from mtg_meta_scraper import pipeline
+
+    it = iter(outcomes)
+
+    def fake_update(*_args):
+        outcome = next(it)
+        if isinstance(outcome, Exception):
+            raise outcome
+        return SimpleNamespace(aborted=outcome)
+
+    monkeypatch.setattr(pipeline, "update", fake_update)
+
+
+def test_update_with_retries_first_attempt_ok(monkeypatch):
+    _scripted_update(monkeypatch, [False])
+    sleeps: list[float] = []
+    assert update_with_retries(None, RollbackRepo(), settings(), TODAY, sleep=sleeps.append) is True
+    assert sleeps == []
+
+
+def test_update_with_retries_retries_failures_and_early_stops(monkeypatch):
+    _scripted_update(monkeypatch, [RuntimeError("MTGTop8 home page unavailable"), True, False])
+    repo, sleeps = RollbackRepo(), []
+    assert update_with_retries(None, repo, settings(), TODAY, sleep=sleeps.append) is True
+    assert sleeps == [900, 900]
+    assert repo.rollbacks == 1
+
+
+def test_update_with_retries_gives_up_after_four_attempts(monkeypatch):
+    _scripted_update(monkeypatch, [RuntimeError("down")] * 2 + [True] * 2)
+    sleeps: list[float] = []
+    assert update_with_retries(None, RollbackRepo(), settings(), TODAY, sleep=sleeps.append) is False
+    assert sleeps == [900, 900, 900]
