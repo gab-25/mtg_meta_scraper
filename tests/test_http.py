@@ -81,7 +81,7 @@ def test_settings_from_env_parses_formats(monkeypatch):
     s = Settings.from_env()
     assert s.formats == ("MO", "cEDH")
     assert s.request_interval == 1.5
-    assert s.backfill_days == 30
+    assert s.backfill_days == 90
 
 
 def test_honours_retry_after_on_429():

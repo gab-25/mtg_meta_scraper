@@ -23,7 +23,7 @@ docker compose up -d --build
 ```
 
 - Grafana: <http://localhost:3000>, login only (anonymous access and sign-up are off): admin / `GF_ADMIN_PASSWORD`. `GF_ADMIN_PASSWORD` only applies when the Grafana volume is first created.
-- On first start the scraper backfills the **last 30 days**. It makes roughly one request every 1.5 s and needs one per deck, so the backfill takes **a few hours** (about 3-4). It goes from the most recent events to the oldest, so the dashboard fills up with recent data right away. If interrupted, it resumes where it left off. For a longer history raise `MTG_META_SCRAPER_BACKFILL_DAYS` (e.g. `183` for 6 months: about a day). The daily update never deletes old data, so the history grows on its own.
+- On first start the scraper backfills the **last 90 days**. It makes roughly one request every 1.5 s and needs one per deck, so the backfill takes **about half a day** (roughly 9-12 hours). It goes from the most recent events to the oldest, so the dashboard fills up with recent data right away. If interrupted, it resumes where it left off. For a longer history raise `MTG_META_SCRAPER_BACKFILL_DAYS` (e.g. `183` for 6 months: about a day). The daily update never deletes old data, so the history grows on its own.
 - After the initial backfill, the update runs every day at `MTG_META_SCRAPER_UPDATE_HOUR_UTC` (UTC). It collects new tournaments and rechecks those from the last `MTG_META_SCRAPER_RECHECK_DAYS` days.
 
 Logs: `docker compose logs -f scraper`.
@@ -42,14 +42,14 @@ If the scraper hits 100 missing or failing pages in a row (site down, blocked, H
 
 Postgres (`5432`) and Grafana (`3000`) are exposed on `127.0.0.1` only.
 
-For each format, `validate` compares the top 10 archetypes of the site's "Metagame Breakdown – Last 2 Months" with our percentages over the last 60 days. It flags a `MISMATCH` beyond ±2 points and exits with code 1. Until the backfill is complete, or if it covers fewer than 60 days (as with the default of 30), mismatches are expected.
+For each format, `validate` compares the top 10 archetypes of the site's "Metagame Breakdown – Last 2 Months" with our percentages over the last 60 days. It flags a `MISMATCH` beyond ±2 points and exits with code 1. Until the backfill is complete, or if it covers fewer than 60 days, mismatches are expected.
 
 ## Configuration
 
 | Variable | Default | Meaning |
 |---|---|---|
 | `MTG_META_SCRAPER_FORMATS` | `ST,PI,MO,LE,VI,PAU,EDH,cEDH` | Formats to collect |
-| `MTG_META_SCRAPER_BACKFILL_DAYS` | `30` | Backfill depth |
+| `MTG_META_SCRAPER_BACKFILL_DAYS` | `90` | Backfill depth |
 | `MTG_META_SCRAPER_REQUEST_INTERVAL` | `1.5` | Seconds between two requests (don't lower it too much) |
 | `MTG_META_SCRAPER_RECHECK_DAYS` | `3` | Days of tournaments to recheck on each update |
 | `MTG_META_SCRAPER_UPDATE_HOUR_UTC` | `6` | Hour of the daily update |
