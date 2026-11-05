@@ -2,7 +2,7 @@
   "uid": "mtg-meta",
   "title": "MTG Meta",
   "tags": [
-    "mtg"
+    "mtg_meta_scraper"
   ],
   "timezone": "utc",
   "schemaVersion": 39,

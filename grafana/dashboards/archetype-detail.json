@@ -2,7 +2,7 @@
   "uid": "archetype-detail",
   "title": "Archetype detail",
   "tags": [
-    "mtg"
+    "mtg_meta_scraper"
   ],
   "timezone": "utc",
   "schemaVersion": 39,
