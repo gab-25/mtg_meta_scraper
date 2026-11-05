@@ -162,3 +162,33 @@ def test_group_top_cards_counts_only_decks_with_a_list(repo, seed):
         ("main", "Island", 1, 50.0, 2.0),
         ("side", "Pyroblast", 1, 50.0, 2.0),
     ]
+
+
+def test_group_summary(repo, seed):
+    seed.event(1, "MO", date(2026, 10, 5))
+    seed.deck(1, "MO", "A", rank=1)
+    seed.deck(1, "MO", "A", rank=5)
+    seed.many(1, "MO", "B", 2)
+    seed.event(2, "MO", date(2026, 10, 6), league=True)
+    seed.deck(2, "MO", "A", rank=1)
+    rows = fetch(repo, "SELECT * FROM group_summary('MO', 'A', :t_from, :t_to)", t_from=FROM, t_to=TO)
+    [(decks, share, avg_points, win_pct)] = rows
+    assert (decks, float(share), float(avg_points), float(win_pct)) == (3, 60.0, 5.0, 50.0)
+
+
+def test_group_summary_unknown_group(repo, seed):
+    seed.event(1, "MO", date(2026, 10, 5))
+    seed.many(1, "MO", "B", 2)
+    rows = fetch(repo, "SELECT * FROM group_summary('MO', 'A', :t_from, :t_to)", t_from=FROM, t_to=TO)
+    assert rows == [(0, 0, None, None)]
+
+
+def test_group_performance_series_excludes_leagues(repo, seed):
+    seed.event(1, "MO", date(2026, 10, 5))
+    seed.deck(1, "MO", "A", rank=1)
+    seed.deck(1, "MO", "A", rank=3)
+    seed.event(2, "MO", date(2026, 10, 6), league=True)
+    seed.deck(2, "MO", "A", rank=17)
+    rows = fetch(repo, "SELECT avg_points FROM group_performance_series('MO', 'A', '7 days', :t_from, :t_to)",
+                 t_from=FROM, t_to=TO)
+    assert [float(a) for (a,) in rows] == [6.0]

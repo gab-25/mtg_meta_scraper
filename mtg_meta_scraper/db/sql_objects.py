@@ -199,9 +199,44 @@ $$
 """,
 )
 
+# Detail: one group over the whole range. Share includes Leagues; performance and wins exclude them.
+GROUP_SUMMARY = PGFunction(
+    schema="public",
+    signature="group_summary(fmt text, grp text, t_from timestamptz, t_to timestamptz)",
+    definition="""
+RETURNS TABLE (decks int, share numeric, avg_points numeric, win_pct numeric)
+LANGUAGE sql STABLE AS $$
+    SELECT count(*) FILTER (WHERE df.group_name = grp)::int,
+           100.0 * count(*) FILTER (WHERE df.group_name = grp) / NULLIF(count(*), 0),
+           avg(df.points) FILTER (WHERE df.group_name = grp AND NOT df.is_league),
+           100.0 * count(*) FILTER (WHERE df.group_name = grp AND NOT df.is_league AND df.rank_min = 1)
+               / NULLIF(count(*) FILTER (WHERE df.group_name = grp AND NOT df.is_league), 0)
+    FROM deck_facts df
+    WHERE df.format_code = fmt AND df.event_date BETWEEN t_from::date AND t_to::date
+$$
+""",
+)
+
+# Detail: average performance of one group per time bucket; Leagues excluded.
+GROUP_PERFORMANCE_SERIES = PGFunction(
+    schema="public",
+    signature="group_performance_series(fmt text, grp text, bucket interval, t_from timestamptz, t_to timestamptz)",
+    definition="""
+RETURNS TABLE ("time" timestamptz, avg_points numeric)
+LANGUAGE sql STABLE AS $$
+    SELECT time_bucket(bucket, df.event_date)::timestamptz, avg(df.points)
+    FROM deck_facts df
+    WHERE df.format_code = fmt AND df.group_name = grp AND NOT df.is_league
+      AND df.event_date BETWEEN t_from::date AND t_to::date
+    GROUP BY 1
+    ORDER BY 1
+$$
+""",
+)
+
 # Order matters: each object only depends on the ones before it.
 ENTITIES = [PLACEMENT_POINTS, DECK_FACTS, META_SHARE_SERIES, PERFORMANCE_SERIES, RISING, GROUP_BREAKDOWN,
-            GROUP_SHARE_SERIES, GROUP_TOP_CARDS]
+            GROUP_SHARE_SERIES, GROUP_TOP_CARDS, GROUP_SUMMARY, GROUP_PERFORMANCE_SERIES]
 
 # Only views and functions: the TimescaleDB extension is created by migration 0001.
 register_entities(ENTITIES, entity_types=[PGView, PGFunction])
