@@ -174,7 +174,7 @@
     {
       "id": 7,
       "type": "stat",
-      "title": "Top archetype",
+      "title": "Meta diversity",
       "datasource": {
         "type": "grafana-postgresql-datasource",
         "uid": "mtg-meta-scraper-db"
@@ -195,7 +195,7 @@
           "editorMode": "code",
           "format": "table",
           "rawQuery": true,
-          "rawSql": "SELECT coalesce(\n  (SELECT group_name || ' · ' || to_char(100.0 * count(*) / sum(count(*)) OVER (), 'FM990.0') || '%'\n   FROM deck_facts\n   WHERE format_code = ${format:sqlstring} AND event_date BETWEEN $__timeFrom()::date AND $__timeTo()::date\n   GROUP BY group_name\n   ORDER BY count(*) DESC, group_name\n   LIMIT 1), '–') AS \"Top archetype\""
+          "rawSql": "SELECT coalesce(\n  (SELECT to_char(1 / sum(share * share), 'FM990.0') || ' effective archetypes'\n   FROM (SELECT count(*)::numeric / sum(count(*)) OVER () AS share\n         FROM deck_facts\n         WHERE format_code = ${format:sqlstring} AND event_date BETWEEN $__timeFrom()::date AND $__timeTo()::date\n         GROUP BY group_name) s\n   HAVING count(*) > 0), '–') AS \"Meta diversity\""
         }
       ],
       "fieldConfig": {
@@ -223,7 +223,7 @@
         "showPercentChange": false,
         "wideLayout": true
       },
-      "description": "Archetype (commander for Duel Commander/cEDH) with the largest share of the format's decks in the dashboard time range, MTGO Leagues included."
+      "description": "Effective number of archetypes in the dashboard time range (1 / sum of squared shares, MTGO Leagues included). Ten archetypes at 10% each give 10; one archetype at 80% brings it close to 1-2. Higher means a more open format."
     },
     {
       "id": 8,
