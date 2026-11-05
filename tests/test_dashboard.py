@@ -44,7 +44,7 @@ def test_dashboard_panel_sql_executes(repo):
         final = _substitute(sql)
         assert not re.search(r"\$\w", final), final
         with repo.session.begin():
-            repo.session.connection().exec_driver_sql(final).fetchall()
+            repo.session.connection().exec_driver_sql(final.replace("%", "%%")).fetchall()  # a literal % is not a placeholder
 
 
 def test_dashboard_variables_present():

@@ -118,6 +118,168 @@
   },
   "panels": [
     {
+      "id": 6,
+      "type": "stat",
+      "title": "Decks · events",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(count(*), 'FM999,999,990') || ' decks · ' || count(DISTINCT d.event_id) || ' events' AS \"Decks · events\"\nFROM deck d\nJOIN event e ON e.id = d.event_id\nWHERE e.format_code = ${format:sqlstring} AND e.event_date BETWEEN $__timeFrom()::date AND $__timeTo()::date"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "showPercentChange": false,
+        "wideLayout": true
+      },
+      "description": "Decks and events collected for the format in the dashboard time range, MTGO Leagues included: how much data the charts below rest on."
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Top archetype",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(\n  (SELECT group_name || ' · ' || to_char(100.0 * count(*) / sum(count(*)) OVER (), 'FM990.0') || '%'\n   FROM deck_facts\n   WHERE format_code = ${format:sqlstring} AND event_date BETWEEN $__timeFrom()::date AND $__timeTo()::date\n   GROUP BY group_name\n   ORDER BY count(*) DESC, group_name\n   LIMIT 1), '–') AS \"Top archetype\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "showPercentChange": false,
+        "wideLayout": true
+      },
+      "description": "Archetype (commander for Duel Commander/cEDH) with the largest share of the format's decks in the dashboard time range, MTGO Leagues included."
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Latest event",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(\n  (SELECT to_char(max(event_date), 'YYYY-MM-DD') FROM event WHERE format_code = ${format:sqlstring}),\n  'never') AS \"Latest event\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "showPercentChange": false,
+        "wideLayout": true
+      },
+      "description": "Date of the most recent event collected for the format, whatever the time range: how fresh its data is."
+    },
+    {
       "id": 5,
       "type": "stat",
       "title": "Last update",
@@ -126,9 +288,9 @@
         "uid": "mtg-meta-scraper-db"
       },
       "gridPos": {
-        "h": 3,
-        "w": 24,
-        "x": 0,
+        "h": 4,
+        "w": 6,
+        "x": 18,
         "y": 0
       },
       "targets": [
@@ -168,7 +330,8 @@
         "orientation": "auto",
         "showPercentChange": false,
         "wideLayout": true
-      }
+      },
+      "description": "When the daily update last ran (Europe/Rome time) and whether it succeeded."
     },
     {
       "id": 1,
@@ -183,7 +346,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 3
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -243,7 +406,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 13
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -304,7 +467,7 @@
         "h": 12,
         "w": 24,
         "x": 0,
-        "y": 23
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
