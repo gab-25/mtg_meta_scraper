@@ -4,7 +4,7 @@ from decimal import Decimal
 import pytest
 
 from conftest import fetch
-from mtg_meta_scraper.db.tables import Archetype, Deck, Event
+from mtg_meta_scraper.db.tables import Archetype, Deck, DeckCard, Event
 
 FROM = datetime(2026, 9, 1, tzinfo=timezone.utc)
 TO = datetime(2026, 11, 3, tzinfo=timezone.utc)
@@ -34,6 +34,10 @@ class Seeder:
                        deck_name=name or arch, player="p", archetype_id=self.archetypes[key],
                        commander=commander))
         self.next_deck += 1
+        return self.next_deck - 1
+
+    def cards(self, deck_id: int, *lines: tuple[str, str, int]):
+        self._add(*(DeckCard(deck_id=deck_id, section=s, card_name=n, qty=q) for s, n, q in lines))
 
     def many(self, eid, fmt, arch, n, **kw):
         for _ in range(n):
@@ -130,3 +134,31 @@ def test_rising_new_group_has_null_points_delta(repo, seed):
     assert by["A"][4] == 4  # avg_points
     assert by["A"][5] is None  # points_delta: no previous data
     assert float(by["A"][3]) == 100  # share_delta: it was 0% before
+
+
+def test_group_share_series_has_zero_buckets(repo, seed):
+    seed.event(1, "MO", date(2026, 10, 5))
+    seed.many(1, "MO", "A", 1)
+    seed.many(1, "MO", "B", 3)
+    seed.event(2, "MO", date(2026, 10, 20))
+    seed.many(2, "MO", "B", 2)
+    rows = fetch(repo, "SELECT share FROM group_share_series('MO', 'A', '7 days', :t_from, :t_to)",
+                 t_from=FROM, t_to=TO)
+    assert [float(s) for (s,) in rows] == [25.0, 0.0]
+
+
+def test_group_top_cards_counts_only_decks_with_a_list(repo, seed):
+    seed.event(1, "MO", date(2026, 10, 5))
+    d1 = seed.deck(1, "MO", "A")
+    d2 = seed.deck(1, "MO", "A")
+    seed.deck(1, "MO", "A")  # no list scraped: not in the denominator
+    other = seed.deck(1, "MO", "B")
+    seed.cards(d1, ("main", "Bolt", 4), ("main", "Island", 2), ("side", "Pyroblast", 2))
+    seed.cards(d2, ("main", "Bolt", 3))
+    seed.cards(other, ("main", "Bolt", 4))
+    rows = fetch(repo, "SELECT * FROM group_top_cards('MO', 'A', :t_from, :t_to)", t_from=FROM, t_to=TO)
+    assert [(s, n, d, float(p), float(q)) for s, n, d, p, q in rows] == [
+        ("main", "Bolt", 2, 100.0, 3.5),
+        ("main", "Island", 1, 50.0, 2.0),
+        ("side", "Pyroblast", 1, 50.0, 2.0),
+    ]
