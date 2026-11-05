@@ -194,9 +194,13 @@ def test_update_stops_after_consecutive_failures(repo, load_fixture):
 class RollbackRepo:
     def __init__(self):
         self.rollbacks = 0
+        self.runs: list[tuple[int, str]] = []
 
     def rollback(self):
         self.rollbacks += 1
+
+    def log_update_run(self, attempt, _started_at, status, scanned=None, error=None):
+        self.runs.append((attempt, status))
 
 
 def _scripted_update(monkeypatch, outcomes):
@@ -211,16 +215,17 @@ def _scripted_update(monkeypatch, outcomes):
         outcome = next(it)
         if isinstance(outcome, Exception):
             raise outcome
-        return SimpleNamespace(aborted=outcome)
+        return SimpleNamespace(aborted=outcome, scanned=0)
 
     monkeypatch.setattr(pipeline, "update", fake_update)
 
 
 def test_update_with_retries_first_attempt_ok(monkeypatch):
     _scripted_update(monkeypatch, [False])
-    sleeps: list[float] = []
-    assert update_with_retries(None, RollbackRepo(), settings(), TODAY, sleep=sleeps.append) is True
+    repo, sleeps = RollbackRepo(), []
+    assert update_with_retries(None, repo, settings(), TODAY, sleep=sleeps.append) is True
     assert sleeps == []
+    assert repo.runs == [(1, "ok")]
 
 
 def test_update_with_retries_retries_failures_and_early_stops(monkeypatch):
@@ -229,10 +234,12 @@ def test_update_with_retries_retries_failures_and_early_stops(monkeypatch):
     assert update_with_retries(None, repo, settings(), TODAY, sleep=sleeps.append) is True
     assert sleeps == [900, 900]
     assert repo.rollbacks == 1
+    assert repo.runs == [(1, "failed"), (2, "failed"), (3, "ok")]
 
 
 def test_update_with_retries_gives_up_after_four_attempts(monkeypatch):
     _scripted_update(monkeypatch, [RuntimeError("down")] * 2 + [True] * 2)
-    sleeps: list[float] = []
-    assert update_with_retries(None, RollbackRepo(), settings(), TODAY, sleep=sleeps.append) is False
+    repo, sleeps = RollbackRepo(), []
+    assert update_with_retries(None, repo, settings(), TODAY, sleep=sleeps.append) is False
     assert sleeps == [900, 900, 900]
+    assert [s for _, s in repo.runs] == ["failed"] * 4

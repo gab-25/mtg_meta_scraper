@@ -130,6 +130,59 @@
   },
   "panels": [
     {
+      "id": 5,
+      "type": "stat",
+      "title": "Last update",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "gridPos": {
+        "h": 3,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(\n  (SELECT to_char(finished_at AT TIME ZONE 'Europe/Rome', 'YYYY-MM-DD HH24:MI') || ' · ' || status\n   FROM update_run ORDER BY id DESC LIMIT 1), 'never') AS \"Last update\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "showPercentChange": false,
+        "wideLayout": true
+      }
+    },
+    {
       "id": 1,
       "type": "timeseries",
       "title": "Meta share (%)",
@@ -142,7 +195,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 3
       },
       "fieldConfig": {
         "defaults": {
@@ -196,7 +249,7 @@
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 13
       },
       "fieldConfig": {
         "defaults": {
@@ -251,7 +304,7 @@
         "h": 12,
         "w": 14,
         "x": 0,
-        "y": 20
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {
@@ -446,7 +499,7 @@
         "h": 12,
         "w": 10,
         "x": 14,
-        "y": 20
+        "y": 23
       },
       "fieldConfig": {
         "defaults": {},

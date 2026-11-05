@@ -3,14 +3,14 @@
 from __future__ import annotations
 
 from collections.abc import Collection
-from datetime import date
+from datetime import date, datetime
 
 from sqlalchemy import delete, func, select, text, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.orm import Session
 
 from mtg_meta_scraper.db.engine import make_engine, migrate
-from mtg_meta_scraper.db.tables import Archetype, Deck, DeckCard, Event, ScanState
+from mtg_meta_scraper.db.tables import Archetype, Deck, DeckCard, Event, ScanState, UpdateRun
 from mtg_meta_scraper.models import DeckDetail, MetaShare, ParsedEvent
 
 
@@ -119,6 +119,16 @@ class Repo:
                     "attempts": ScanState.attempts + 1,
                     "updated_at": func.now(),
                 },
+            ))
+
+    def log_update_run(
+        self, attempt: int, started_at: datetime, status: str, scanned: int | None = None, error: str | None = None
+    ) -> None:
+        """Record one update attempt in its own transaction, so it stays even when the attempt was rolled back."""
+        with self.session.begin():
+            self.session.add(UpdateRun(
+                attempt=attempt, started_at=started_at, finished_at=func.now(), status=status,
+                scanned=scanned, error=error,
             ))
 
     def scan_state(self, event_id: int) -> tuple[str, int, date | None] | None:

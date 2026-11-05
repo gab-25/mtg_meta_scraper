@@ -51,3 +51,26 @@ def test_dashboard_variables_present():
     assert {v["name"] for v in dash["templating"]["list"]} == {
         "format", "bucket", "top_n", "period", "min_decks", "grp",
     }
+
+
+def _panel_sql(dash: dict, title: str) -> str:
+    [panel] = [p for p in dash["panels"] if p["title"] == title]
+    return panel["targets"][0]["rawSql"]
+
+
+def test_last_update_panel(repo):
+    from datetime import datetime, timezone
+
+    from conftest import fetch
+
+    dash = json.loads(DASHBOARD.read_text())
+    sql = _panel_sql(dash, "Last update")
+    assert fetch(repo, sql) == [("never",)]
+    started = datetime(2026, 11, 5, 3, 0, tzinfo=timezone.utc)
+    repo.log_update_run(1, started, "failed", error="RuntimeError: down")
+    repo.log_update_run(2, started, "ok", scanned=12)
+    [(value,)] = fetch(repo, sql)
+    assert value.endswith(" · ok")
+    assert fetch(repo, "SELECT attempt, status, scanned, error FROM update_run ORDER BY id") == [
+        (1, "failed", None, "RuntimeError: down"), (2, "ok", 12, None),
+    ]
