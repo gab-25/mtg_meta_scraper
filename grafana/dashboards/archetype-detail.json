@@ -13,16 +13,7 @@
     "to": "now"
   },
   "refresh": "",
-  "links": [
-    {
-      "title": "MTG Meta",
-      "type": "link",
-      "icon": "dashboard",
-      "tooltip": "Back to the format overview",
-      "url": "/d/mtg-meta/mtg-meta?${format:queryparam}&${bucket:queryparam}",
-      "keepTime": true
-    }
-  ],
+  "links": [],
   "templating": {
     "list": [
       {

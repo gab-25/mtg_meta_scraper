@@ -66,7 +66,6 @@ def test_meta_links_to_the_archetype_detail():
     for url in links:
         assert url.startswith(f"/d/{detail['uid']}/")
         assert "var-grp=" in url and "${format:queryparam}" in url and "${__url_time_range}" in url
-    assert detail["links"][0]["url"].startswith(f"/d/{dash['uid']}/")
 
 
 def _panel_sql(dash: dict, title: str) -> str:
