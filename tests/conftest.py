@@ -58,7 +58,7 @@ def _session_repo(_test_db_url):
 def repo(_session_repo):
     _session_repo.rollback()
     with _session_repo.session.begin():
-        _session_repo.session.execute(text("TRUNCATE event, archetype, deck, deck_card, scan_state CASCADE"))
+        _session_repo.session.execute(text("TRUNCATE event, archetype, deck, deck_card, scan_state, update_run CASCADE"))
     return _session_repo
 
 

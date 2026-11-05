@@ -1,0 +1,636 @@
+{
+  "uid": "archetype-detail",
+  "title": "Archetype detail",
+  "tags": [
+    "mtg"
+  ],
+  "timezone": "utc",
+  "schemaVersion": 39,
+  "version": 1,
+  "editable": true,
+  "time": {
+    "from": "now-30d",
+    "to": "now"
+  },
+  "refresh": "",
+  "links": [],
+  "templating": {
+    "list": [
+      {
+        "name": "format",
+        "label": "Format",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "mtg-meta-scraper-db"
+        },
+        "refresh": 1,
+        "query": "SELECT code AS __value, name AS __text FROM format ORDER BY name",
+        "definition": "SELECT code AS __value, name AS __text FROM format ORDER BY name",
+        "current": {
+          "text": "Modern",
+          "value": "MO"
+        }
+      },
+      {
+        "name": "grp",
+        "label": "Archetype",
+        "type": "query",
+        "datasource": {
+          "type": "grafana-postgresql-datasource",
+          "uid": "mtg-meta-scraper-db"
+        },
+        "refresh": 2,
+        "query": "SELECT DISTINCT group_name FROM deck_facts WHERE format_code = ${format:sqlstring} AND event_date >= $__timeFrom()::date ORDER BY 1",
+        "definition": "format archetypes in the time range",
+        "description": "MTGTop8 archetype, or commander for Duel Commander / cEDH."
+      },
+      {
+        "name": "bucket",
+        "label": "Bucket",
+        "type": "custom",
+        "query": "7 days,14 days,30 days",
+        "current": {
+          "text": "7 days",
+          "value": "7 days"
+        },
+        "options": [
+          {
+            "text": "7 days",
+            "value": "7 days",
+            "selected": true
+          },
+          {
+            "text": "14 days",
+            "value": "14 days",
+            "selected": false
+          },
+          {
+            "text": "30 days",
+            "value": "30 days",
+            "selected": false
+          }
+        ]
+      }
+    ]
+  },
+  "annotations": {
+    "list": []
+  },
+  "panels": [
+    {
+      "id": 1,
+      "type": "stat",
+      "title": "$grp",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Over the dashboard time range. Share includes MTGO Leagues; performance (average points per placement) and tournament wins exclude them.",
+      "gridPos": {
+        "h": 4,
+        "w": 24,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT decks, share, avg_points, win_pct\nFROM group_summary(${format:sqlstring}, ${grp:sqlstring}, $__timeFrom(), $__timeTo())"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          },
+          "noValue": "–"
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Decks"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "share"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Share"
+              },
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_points"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Performance"
+              },
+              {
+                "id": "decimals",
+                "value": 2
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "win_pct"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "% tournament wins"
+              },
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value_and_name",
+        "justifyMode": "center",
+        "orientation": "vertical",
+        "showPercentChange": false,
+        "wideLayout": true
+      }
+    },
+    {
+      "id": 2,
+      "type": "timeseries",
+      "title": "Share (%)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Percentage of the format's decks that belong to \"$grp\", per time bucket ($bucket). MTGO Leagues included.",
+      "gridPos": {
+        "h": 9,
+        "w": 9,
+        "x": 0,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "percent",
+          "decimals": 1,
+          "min": 0,
+          "displayName": "Share",
+          "custom": {
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "always",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT \"time\", share AS value\nFROM group_share_series(${format:sqlstring}, ${grp:sqlstring}, '$bucket'::interval, $__timeFrom(), $__timeTo())\nORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 3,
+      "type": "timeseries",
+      "title": "Performance (average points per placement)",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Average points per placement of the \"$grp\" decks, per time bucket ($bucket). MTGO Leagues excluded.",
+      "gridPos": {
+        "h": 9,
+        "w": 9,
+        "x": 9,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {
+          "unit": "none",
+          "decimals": 2,
+          "min": 0,
+          "displayName": "Performance",
+          "custom": {
+            "lineWidth": 2,
+            "pointSize": 4,
+            "showPoints": "always",
+            "fillOpacity": 15
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "legend": {
+          "showLegend": false
+        },
+        "tooltip": {
+          "mode": "single"
+        }
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "time_series",
+          "rawQuery": true,
+          "rawSql": "SELECT \"time\", avg_points AS value\nFROM group_performance_series(${format:sqlstring}, ${grp:sqlstring}, '$bucket'::interval, $__timeFrom(), $__timeTo())\nORDER BY 1"
+        }
+      ]
+    },
+    {
+      "id": 4,
+      "type": "table",
+      "title": "Deck names",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Names players gave to the \"$grp\" decks, within the dashboard time range.",
+      "gridPos": {
+        "h": 9,
+        "w": 6,
+        "x": 18,
+        "y": 4
+      },
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deck_name"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Deck name"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Decks"
+              }
+            ]
+          }
+        ]
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM group_breakdown(${format:sqlstring}, ${grp:sqlstring}, $__timeFrom(), $__timeTo())"
+        }
+      ]
+    },
+    {
+      "id": 5,
+      "type": "table",
+      "title": "Main deck cards",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Cards in the main deck (and commander) of the \"$grp\" decks whose list was scraped, within the dashboard time range: in how many decks, and how many copies on average when played.",
+      "gridPos": {
+        "h": 16,
+        "w": 12,
+        "x": 0,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "card"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Card"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Decks"
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks_pct"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "% of decks"
+              },
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlYlRd"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_qty"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Avg copies"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT CASE WHEN section = 'commander' THEN card_name || ' (commander)' ELSE card_name END AS card,\n       decks, decks_pct, avg_qty\nFROM group_top_cards(${format:sqlstring}, ${grp:sqlstring}, $__timeFrom(), $__timeTo())\nWHERE section <> 'side'"
+        }
+      ]
+    },
+    {
+      "id": 6,
+      "type": "table",
+      "title": "Sideboard cards",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "description": "Cards in the sideboard of the \"$grp\" decks whose list was scraped, within the dashboard time range: in how many decks, and how many copies on average when played.",
+      "gridPos": {
+        "h": 16,
+        "w": 12,
+        "x": 12,
+        "y": 13
+      },
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": "auto"
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "card"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Card"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Decks"
+              },
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "decks_pct"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "% of decks"
+              },
+              {
+                "id": "unit",
+                "value": "percent"
+              },
+              {
+                "id": "decimals",
+                "value": 0
+              },
+              {
+                "id": "min",
+                "value": 0
+              },
+              {
+                "id": "max",
+                "value": 100
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "continuous-BlYlRd"
+                }
+              },
+              {
+                "id": "custom.cellOptions",
+                "value": {
+                  "type": "gauge",
+                  "mode": "basic",
+                  "valueDisplayMode": "text"
+                }
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "avg_qty"
+            },
+            "properties": [
+              {
+                "id": "displayName",
+                "value": "Avg copies"
+              },
+              {
+                "id": "decimals",
+                "value": 1
+              },
+              {
+                "id": "custom.width",
+                "value": 100
+              }
+            ]
+          }
+        ]
+      },
+      "options": {
+        "showHeader": true,
+        "cellHeight": "sm"
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT CASE WHEN section = 'commander' THEN card_name || ' (commander)' ELSE card_name END AS card,\n       decks, decks_pct, avg_qty\nFROM group_top_cards(${format:sqlstring}, ${grp:sqlstring}, $__timeFrom(), $__timeTo())\nWHERE section = 'side'"
+        }
+      ]
+    }
+  ]
+}

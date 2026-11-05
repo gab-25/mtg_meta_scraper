@@ -6,7 +6,7 @@ import logging
 import time
 from collections.abc import Callable, Collection
 from dataclasses import dataclass
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta, timezone
 from typing import Protocol
 
 from mtg_meta_scraper.config import Settings
@@ -172,15 +172,20 @@ def update_with_retries(
 ) -> bool:
     """Run the update, retrying a failure or an early stop. True when an attempt completed."""
     for attempt in range(1, UPDATE_ATTEMPTS + 1):
+        started = datetime.now(timezone.utc)
         try:
             stats = update(fetcher, repo, settings, today)
         except Exception as exc:  # noqa: BLE001 - any failure counts as an attempt
             repo.rollback()
             log.warning("update attempt %d/%d failed: %s: %s", attempt, UPDATE_ATTEMPTS, type(exc).__name__, exc)
+            repo.log_update_run(attempt, started, "failed", error=f"{type(exc).__name__}: {exc}")
         else:
             if not stats.aborted:
+                repo.log_update_run(attempt, started, "ok", scanned=stats.scanned)
                 return True
             log.warning("update attempt %d/%d stopped early", attempt, UPDATE_ATTEMPTS)
+            repo.log_update_run(attempt, started, "failed", scanned=stats.scanned,
+                                error="stopped early: too many missing/failed pages in a row")
         if attempt < UPDATE_ATTEMPTS:
             sleep(UPDATE_RETRY_SECONDS)
     log.error("update: giving up after %d attempts", UPDATE_ATTEMPTS)

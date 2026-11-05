@@ -113,22 +113,226 @@
             "selected": true
           }
         ]
-      },
-      {
-        "name": "grp",
-        "label": "Archetype (detail)",
-        "type": "query",
-        "datasource": {
-          "type": "grafana-postgresql-datasource",
-          "uid": "mtg-meta-scraper-db"
-        },
-        "refresh": 2,
-        "query": "SELECT DISTINCT group_name FROM deck_facts WHERE format_code = ${format:sqlstring} AND event_date >= $__timeFrom()::date ORDER BY 1",
-        "definition": "format archetypes in the time range"
       }
     ]
   },
   "panels": [
+    {
+      "id": 6,
+      "type": "stat",
+      "title": "Decks · events",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 0,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT to_char(count(*), 'FM999,999,990') || ' decks · ' || count(DISTINCT d.event_id) || ' events' AS \"Decks · events\"\nFROM deck d\nJOIN event e ON e.id = d.event_id\nWHERE e.format_code = ${format:sqlstring} AND e.event_date BETWEEN $__timeFrom()::date AND $__timeTo()::date"
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "showPercentChange": false,
+        "wideLayout": true
+      },
+      "description": "Decks and events collected for the format in the dashboard time range, MTGO Leagues included: how much data the charts below rest on."
+    },
+    {
+      "id": 7,
+      "type": "stat",
+      "title": "Meta diversity",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 6,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(\n  (SELECT to_char(1 / sum(share * share), 'FM990.0') || ' effective archetypes'\n   FROM (SELECT count(*)::numeric / sum(count(*)) OVER () AS share\n         FROM deck_facts\n         WHERE format_code = ${format:sqlstring} AND event_date BETWEEN $__timeFrom()::date AND $__timeTo()::date\n         GROUP BY group_name) s\n   HAVING count(*) > 0), '–') AS \"Meta diversity\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "showPercentChange": false,
+        "wideLayout": true
+      },
+      "description": "Effective number of archetypes in the dashboard time range (1 / sum of squared shares, MTGO Leagues included). Ten archetypes at 10% each give 10; one archetype at 80% brings it close to 1-2. Higher means a more open format."
+    },
+    {
+      "id": 8,
+      "type": "stat",
+      "title": "Latest event",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 12,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(\n  (SELECT to_char(max(event_date), 'YYYY-MM-DD') FROM event WHERE format_code = ${format:sqlstring}),\n  'never') AS \"Latest event\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "showPercentChange": false,
+        "wideLayout": true
+      },
+      "description": "Date of the most recent event collected for the format, whatever the time range: how fresh its data is."
+    },
+    {
+      "id": 5,
+      "type": "stat",
+      "title": "Last update",
+      "datasource": {
+        "type": "grafana-postgresql-datasource",
+        "uid": "mtg-meta-scraper-db"
+      },
+      "gridPos": {
+        "h": 4,
+        "w": 6,
+        "x": 18,
+        "y": 0
+      },
+      "targets": [
+        {
+          "refId": "A",
+          "datasource": {
+            "type": "grafana-postgresql-datasource",
+            "uid": "mtg-meta-scraper-db"
+          },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT coalesce(\n  (SELECT to_char(finished_at AT TIME ZONE 'Europe/Rome', 'YYYY-MM-DD HH24:MI') || ' · ' || status\n   FROM update_run ORDER BY id DESC LIMIT 1), 'never') AS \"Last update\""
+        }
+      ],
+      "fieldConfig": {
+        "defaults": {
+          "color": {
+            "mode": "fixed",
+            "fixedColor": "text"
+          }
+        },
+        "overrides": []
+      },
+      "options": {
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "/.*/",
+          "values": false
+        },
+        "colorMode": "value",
+        "graphMode": "none",
+        "textMode": "value",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "showPercentChange": false,
+        "wideLayout": true
+      },
+      "description": "When the daily update last ran (Europe/Rome time) and whether it succeeded."
+    },
     {
       "id": 1,
       "type": "timeseries",
@@ -137,12 +341,12 @@
         "type": "grafana-postgresql-datasource",
         "uid": "mtg-meta-scraper-db"
       },
-      "description": "Percentage of the format's decks belonging to each archetype (commander for Duel Commander/cEDH), per time bucket. MTGO Leagues included.",
+      "description": "Percentage of the format's decks belonging to each archetype (commander for Duel Commander/cEDH), per time bucket. MTGO Leagues included. Click a series to open the archetype's detail.",
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 0
+        "y": 4
       },
       "fieldConfig": {
         "defaults": {
@@ -151,7 +355,13 @@
             "lineWidth": 2,
             "pointSize": 4,
             "showPoints": "always"
-          }
+          },
+          "links": [
+            {
+              "title": "Archetype detail: ${__series.name}",
+              "url": "/d/archetype-detail/archetype-detail?${format:queryparam}&${bucket:queryparam}&var-grp=${__series.name:percentencode}&${__url_time_range}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -191,12 +401,12 @@
         "type": "grafana-postgresql-datasource",
         "uid": "mtg-meta-scraper-db"
       },
-      "description": "Average points per placement: 1st = 8, 2nd = 6, 3-4 = 4, 5-8 = 2, 9-16 = 1, below = 0.5. MTGO Leagues excluded (they have no real placement). A proxy for winrate, which MTGTop8 does not publish.",
+      "description": "Average points per placement: 1st = 8, 2nd = 6, 3-4 = 4, 5-8 = 2, 9-16 = 1, below = 0.5. MTGO Leagues excluded (they have no real placement). A proxy for winrate, which MTGTop8 does not publish. Click a series to open the archetype's detail.",
       "gridPos": {
         "h": 10,
         "w": 24,
         "x": 0,
-        "y": 10
+        "y": 14
       },
       "fieldConfig": {
         "defaults": {
@@ -206,7 +416,13 @@
             "lineWidth": 2,
             "pointSize": 4,
             "showPoints": "always"
-          }
+          },
+          "links": [
+            {
+              "title": "Archetype detail: ${__series.name}",
+              "url": "/d/archetype-detail/archetype-detail?${format:queryparam}&${bucket:queryparam}&var-grp=${__series.name:percentencode}&${__url_time_range}"
+            }
+          ]
         },
         "overrides": []
       },
@@ -246,12 +462,12 @@
         "type": "grafana-postgresql-datasource",
         "uid": "mtg-meta-scraper-db"
       },
-      "description": "Compares the last period ($period) with the previous one of equal length. Only archetypes with at least $min_decks decks in the current period. Sorted by share change.",
+      "description": "Compares the last period ($period) with the previous one of equal length. Only archetypes with at least $min_decks decks in the current period. Sorted by share change. Click an archetype to open its detail.",
       "gridPos": {
         "h": 12,
-        "w": 14,
+        "w": 24,
         "x": 0,
-        "y": 20
+        "y": 24
       },
       "fieldConfig": {
         "defaults": {
@@ -411,6 +627,15 @@
               {
                 "id": "displayName",
                 "value": "Archetype"
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Archetype detail: ${__value.raw}",
+                    "url": "/d/archetype-detail/archetype-detail?${format:queryparam}&${bucket:queryparam}&var-grp=${__value.raw:percentencode}&${__url_time_range}"
+                  }
+                ]
               }
             ]
           }
@@ -430,64 +655,6 @@
           "format": "table",
           "rawQuery": true,
           "rawSql": "SELECT * FROM rising(${format:sqlstring}, '$period'::interval, $min_decks, now())"
-        }
-      ]
-    },
-    {
-      "id": 4,
-      "type": "table",
-      "title": "Detail: deck names in \"$grp\"",
-      "datasource": {
-        "type": "grafana-postgresql-datasource",
-        "uid": "mtg-meta-scraper-db"
-      },
-      "description": "Names players gave to the decks grouped under the selected archetype ('Archetype' variable), within the dashboard time range.",
-      "gridPos": {
-        "h": 12,
-        "w": 10,
-        "x": 14,
-        "y": 20
-      },
-      "fieldConfig": {
-        "defaults": {},
-        "overrides": [
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "deck_name"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Deck name"
-              }
-            ]
-          },
-          {
-            "matcher": {
-              "id": "byName",
-              "options": "decks"
-            },
-            "properties": [
-              {
-                "id": "displayName",
-                "value": "Decks"
-              }
-            ]
-          }
-        ]
-      },
-      "targets": [
-        {
-          "refId": "A",
-          "datasource": {
-            "type": "grafana-postgresql-datasource",
-            "uid": "mtg-meta-scraper-db"
-          },
-          "editorMode": "code",
-          "format": "table",
-          "rawQuery": true,
-          "rawSql": "SELECT * FROM group_breakdown(${format:sqlstring}, ${grp:sqlstring}, $__timeFrom(), $__timeTo())"
         }
       ]
     }
