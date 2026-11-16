@@ -13,7 +13,9 @@ Formats: Standard, Pioneer, Modern, Legacy, Vintage, Pauper, Duel Commander, cED
 
 Archetypes are MTGTop8's categories (e.g. "Rakdos Aggro"). In Duel Commander and cEDH decks are grouped by **commander**: partner pairs count as a single entry.
 
-Variables at the top: format, time bucket, top N archetypes, "rising" period, minimum decks. For Commander formats it helps to raise "Minimum decks" and lower "Top N", since there are many commanders with few decks each.
+A second dashboard, **Updates**, monitors the scraper: whether today's update completed, every attempt with its error, events stored per day and format, and the event pages whose scrape failed (with a link to MTGTop8).
+
+Variables at the top of MTG Meta: format, time bucket, top N archetypes, "rising" period, minimum decks. For Commander formats it helps to raise "Minimum decks" and lower "Top N", since there are many commanders with few decks each.
 
 ## Getting started
 
