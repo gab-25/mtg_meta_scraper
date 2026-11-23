@@ -3,7 +3,7 @@ import re
 from pathlib import Path
 
 DASHBOARDS = Path(__file__).parent.parent / "grafana" / "dashboards"
-DASHBOARD = DASHBOARDS / "mtg-meta.json"
+DASHBOARD = DASHBOARDS / "meta.json"
 DETAIL = DASHBOARDS / "archetype-detail.json"
 UPDATES = DASHBOARDS / "updates.json"
 

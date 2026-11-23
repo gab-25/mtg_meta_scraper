@@ -15,7 +15,7 @@ Archetypes are MTGTop8's categories (e.g. "Rakdos Aggro"). In Duel Commander and
 
 A second dashboard, **Updates**, monitors the scraper: whether today's update completed, every attempt with its error, events stored per day and format, and the event pages whose scrape failed (with a link to MTGTop8).
 
-Variables at the top of MTG Meta: format, time bucket, top N archetypes, "rising" period, minimum decks. For Commander formats it helps to raise "Minimum decks" and lower "Top N", since there are many commanders with few decks each.
+Variables at the top of Meta: format, time bucket, top N archetypes, "rising" period, minimum decks. For Commander formats it helps to raise "Minimum decks" and lower "Top N", since there are many commanders with few decks each.
 
 ## Getting started
 

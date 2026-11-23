@@ -1,6 +1,6 @@
 {
-  "uid": "mtg-meta",
-  "title": "MTG Meta",
+  "uid": "meta",
+  "title": "Meta",
   "tags": [
     "mtg_meta_scraper"
   ],
